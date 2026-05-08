@@ -244,6 +244,39 @@ Access control is calculated by `AccessControlService`. The API layer only recei
 
 Every access check creates an `AccessLog`, including failed checks for nonexistent CPF values. Access logs store `cpf_attempted`, `student_id` when known, `accessed_at`, `allowed`, and the denial reason when access is blocked.
 
+## Workout Domain
+
+Workout planning endpoints:
+
+```bash
+POST /api/workout-plans
+GET /api/workout-plans
+GET /api/workout-plans/{id}
+GET /api/workout-plans/student/{student_id}
+PUT /api/workout-plans/{id}
+DELETE /api/workout-plans/{id}
+POST /api/workout-plans/{id}/exercises
+GET /api/workout-plans/{id}/exercises
+PUT /api/exercises/{id}
+DELETE /api/exercises/{id}
+POST /api/exercise-progress
+GET /api/exercise-progress/student/{student_id}
+GET /api/exercise-progress/student/{student_id}/exercise/{exercise_id}
+```
+
+Permissions:
+
+- `ADMIN`: full access.
+- `INSTRUCTOR`: create and edit workout plans, exercises, and progress records.
+- `RECEPTIONIST`: read-only access.
+
+Workout rules:
+
+- Workout plans require an existing active student and an active instructor user.
+- Workout plan and exercise soft deletes set `status` to `INACTIVE`.
+- Exercises cannot be created in inactive workout plans.
+- Exercise progress is historical; every record is appended and never overwrites prior progress.
+
 ## Alembic
 
 Migrations are configured for SQLAlchemy async and read `DATABASE_URL` from environment settings.

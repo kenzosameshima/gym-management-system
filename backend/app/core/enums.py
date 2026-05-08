@@ -17,6 +17,16 @@ class PlanStatus(str, Enum):  # noqa: UP042
     INACTIVE = "INACTIVE"
 
 
+class WorkoutPlanStatus(str, Enum):  # noqa: UP042
+    ACTIVE = "ACTIVE"
+    INACTIVE = "INACTIVE"
+
+
+class ExerciseStatus(str, Enum):  # noqa: UP042
+    ACTIVE = "ACTIVE"
+    INACTIVE = "INACTIVE"
+
+
 class EnrollmentStatus(str, Enum):  # noqa: UP042
     ACTIVE = "ACTIVE"
     EXPIRED = "EXPIRED"

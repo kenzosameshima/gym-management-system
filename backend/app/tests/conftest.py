@@ -26,10 +26,13 @@ from app.database.session import AsyncSessionFactory, engine
 from app.main import app
 from app.models.access_log import AccessLog
 from app.models.enrollment import Enrollment
+from app.models.exercise import Exercise
+from app.models.exercise_progress import ExerciseProgress
 from app.models.payment import Payment
 from app.models.plan import Plan
 from app.models.student import Student
 from app.models.user import User
+from app.models.workout_plan import WorkoutPlan
 
 
 @pytest.fixture
@@ -46,6 +49,9 @@ async def clean_database() -> AsyncGenerator[None, None]:
         await connection.run_sync(Base.metadata.create_all)
 
     async with AsyncSessionFactory() as session:
+        await session.execute(delete(ExerciseProgress))
+        await session.execute(delete(Exercise))
+        await session.execute(delete(WorkoutPlan))
         await session.execute(delete(AccessLog))
         await session.execute(delete(Payment))
         await session.execute(delete(Enrollment))
@@ -57,6 +63,9 @@ async def clean_database() -> AsyncGenerator[None, None]:
     yield
 
     async with AsyncSessionFactory() as session:
+        await session.execute(delete(ExerciseProgress))
+        await session.execute(delete(Exercise))
+        await session.execute(delete(WorkoutPlan))
         await session.execute(delete(AccessLog))
         await session.execute(delete(Payment))
         await session.execute(delete(Enrollment))
