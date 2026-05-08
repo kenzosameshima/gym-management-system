@@ -1,16 +1,10 @@
 from datetime import date, datetime
-from enum import StrEnum
 
 from sqlalchemy import Date, DateTime, Enum, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column
 
+from app.core.enums import StudentStatus
 from app.database.base import Base
-
-
-class StudentStatus(StrEnum):
-    ACTIVE = "ACTIVE"
-    INACTIVE = "INACTIVE"
-    DEFAULTER = "DEFAULTER"
 
 
 class Student(Base):

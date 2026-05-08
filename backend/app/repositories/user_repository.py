@@ -1,7 +1,8 @@
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.user import User, UserRole
+from app.core.enums import UserRole
+from app.models.user import User
 
 
 class UserRepository:

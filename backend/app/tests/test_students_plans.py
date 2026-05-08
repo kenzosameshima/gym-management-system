@@ -4,6 +4,7 @@ from httpx import AsyncClient
 def student_payload(
     cpf: str = "12345678901",
     email: str = "student@example.com",
+    status: str = "ACTIVE",
 ) -> dict[str, str]:
     return {
         "name": "Student One",
@@ -12,7 +13,7 @@ def student_payload(
         "phone": "+5511999999999",
         "email": email,
         "address": "Main Street",
-        "status": "ACTIVE",
+        "status": status,
     }
 
 
@@ -94,7 +95,8 @@ async def test_list_students_authenticated(client: AsyncClient) -> None:
 
     assert create_response.status_code == 201
     assert response.status_code == 200
-    assert len(response.json()) == 1
+    assert response.json()["total"] == 1
+    assert len(response.json()["items"]) == 1
 
 
 async def test_soft_delete_student(client: AsyncClient) -> None:
@@ -107,6 +109,16 @@ async def test_soft_delete_student(client: AsyncClient) -> None:
     assert create_response.status_code == 201
     assert response.status_code == 200
     assert response.json()["status"] == "INACTIVE"
+
+
+async def test_student_status_rejects_defaulter(client: AsyncClient) -> None:
+    response = await client.post(
+        "/api/students",
+        json=student_payload(status="DEFAULTER"),
+        headers=await auth_headers(client),
+    )
+
+    assert response.status_code == 422
 
 
 async def test_create_plan_authenticated(client: AsyncClient) -> None:
@@ -151,7 +163,22 @@ async def test_list_plans_authenticated(client: AsyncClient) -> None:
 
     assert create_response.status_code == 201
     assert response.status_code == 200
-    assert len(response.json()) == 1
+    assert response.json()["total"] == 1
+    assert len(response.json()["items"]) == 1
+
+
+async def test_filter_students_by_cpf_email_and_name(client: AsyncClient) -> None:
+    headers = await auth_headers(client)
+    await client.post("/api/students", json=student_payload(), headers=headers)
+
+    cpf_response = await client.get("/api/students?cpf=12345678901", headers=headers)
+    email_response = await client.get("/api/students?email=student@example.com", headers=headers)
+    name_response = await client.get("/api/students?name=Student", headers=headers)
+
+    assert cpf_response.status_code == 200
+    assert cpf_response.json()["total"] == 1
+    assert email_response.json()["total"] == 1
+    assert name_response.json()["total"] == 1
 
 
 async def test_soft_delete_plan(client: AsyncClient) -> None:

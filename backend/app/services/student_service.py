@@ -1,20 +1,39 @@
-from collections.abc import Sequence
-
 from fastapi import Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.enums import StudentStatus
 from app.core.exceptions import ApplicationError
-from app.models.student import Student, StudentStatus
+from app.models.student import Student
 from app.repositories.student_repository import StudentRepository, get_student_repository
-from app.schemas.student import StudentCreate, StudentUpdate
+from app.schemas.pagination import Page
+from app.schemas.student import StudentCreate, StudentRead, StudentUpdate
 
 
 class StudentService:
     def __init__(self, repository: StudentRepository) -> None:
         self._repository = repository
 
-    async def list_students(self, session: AsyncSession) -> Sequence[Student]:
-        return await self._repository.list(session)
+    async def list_students(
+        self,
+        session: AsyncSession,
+        *,
+        limit: int,
+        offset: int,
+        search: str | None = None,
+        cpf: str | None = None,
+        email: str | None = None,
+        name: str | None = None,
+    ) -> Page[StudentRead]:
+        students, total = await self._repository.list(
+            session,
+            limit=limit,
+            offset=offset,
+            search=search,
+            cpf=cpf,
+            email=email,
+            name=name,
+        )
+        return Page[StudentRead](items=list(students), total=total, limit=limit, offset=offset)
 
     async def get_student(self, session: AsyncSession, student_id: int) -> Student:
         student = await self._repository.get_by_id(session, student_id)

@@ -28,6 +28,9 @@ dev = [
     "ruff>=0.5.1,<1.0.0",
 ]
 
+[tool.setuptools]
+packages = ["app"]
+
 [tool.black]
 line-length = 100
 target-version = ["py312"]

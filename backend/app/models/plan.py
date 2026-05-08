@@ -1,16 +1,11 @@
 from datetime import datetime
 from decimal import Decimal
-from enum import StrEnum
 
 from sqlalchemy import DateTime, Enum, Numeric, String, func
 from sqlalchemy.orm import Mapped, mapped_column
 
+from app.core.enums import PlanStatus
 from app.database.base import Base
-
-
-class PlanStatus(StrEnum):
-    ACTIVE = "ACTIVE"
-    INACTIVE = "INACTIVE"
 
 
 class Plan(Base):

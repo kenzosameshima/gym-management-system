@@ -3,8 +3,9 @@ from collections.abc import Callable
 from fastapi import Depends, status
 
 from app.auth.dependencies import get_current_user
+from app.core.enums import UserRole
 from app.core.exceptions import ApplicationError
-from app.models.user import User, UserRole
+from app.models.user import User
 
 
 def require_roles(*allowed_roles: UserRole) -> Callable[[User], User]:

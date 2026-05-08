@@ -1,6 +1,6 @@
 from collections.abc import Sequence
 
-from sqlalchemy import select
+from sqlalchemy import Select, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.plan import Plan
@@ -8,9 +8,18 @@ from app.schemas.plan import PlanCreate, PlanUpdate
 
 
 class PlanRepository:
-    async def list(self, session: AsyncSession) -> Sequence[Plan]:
-        result = await session.execute(select(Plan).order_by(Plan.id))
-        return result.scalars().all()
+    async def list(
+        self,
+        session: AsyncSession,
+        *,
+        limit: int,
+        offset: int,
+        name: str | None = None,
+    ) -> tuple[Sequence[Plan], int]:
+        statement = self._filtered_statement(name=name)
+        total_result = await session.execute(select(func.count()).select_from(statement.subquery()))
+        result = await session.execute(statement.order_by(Plan.id).limit(limit).offset(offset))
+        return result.scalars().all(), total_result.scalar_one()
 
     async def get_by_id(self, session: AsyncSession, plan_id: int) -> Plan | None:
         return await session.get(Plan, plan_id)
@@ -32,6 +41,12 @@ class PlanRepository:
         await session.flush()
         await session.refresh(plan)
         return plan
+
+    def _filtered_statement(self, *, name: str | None) -> Select[tuple[Plan]]:
+        statement = select(Plan)
+        if name:
+            statement = statement.where(Plan.name.ilike(f"%{name}%"))
+        return statement
 
 
 def get_plan_repository() -> PlanRepository:

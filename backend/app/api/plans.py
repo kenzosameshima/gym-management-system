@@ -1,11 +1,10 @@
-from collections.abc import Sequence
-
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Query, status
 
 from app.auth.permissions import require_roles
+from app.core.enums import UserRole
 from app.database.session import AsyncSessionDependency
 from app.models.plan import Plan
-from app.models.user import UserRole
+from app.schemas.pagination import Page
 from app.schemas.plan import PlanCreate, PlanRead, PlanUpdate
 from app.services.plan_service import PlanService, get_plan_service
 
@@ -18,6 +17,8 @@ PLAN_MANAGEMENT_ROLES = (UserRole.ADMIN, UserRole.RECEPTIONIST)
     "",
     response_model=PlanRead,
     status_code=status.HTTP_201_CREATED,
+    summary="Create plan",
+    description="Creates a gym plan after validating unique plan name.",
     dependencies=[Depends(require_roles(*PLAN_MANAGEMENT_ROLES))],
 )
 async def create_plan(
@@ -30,21 +31,28 @@ async def create_plan(
 
 @router.get(
     "",
-    response_model=list[PlanRead],
+    response_model=Page[PlanRead],
     status_code=status.HTTP_200_OK,
+    summary="List plans",
+    description="Returns a paginated plan list with optional name filtering.",
     dependencies=[Depends(require_roles(*PLAN_MANAGEMENT_ROLES))],
 )
 async def list_plans(
     session: AsyncSessionDependency,
+    limit: int = Query(default=20, gt=0, le=100),
+    offset: int = Query(default=0, ge=0),
+    name: str | None = Query(default=None, min_length=1, max_length=255),
     service: PlanService = Depends(get_plan_service),
-) -> Sequence[Plan]:
-    return await service.list_plans(session=session)
+) -> Page[PlanRead]:
+    return await service.list_plans(session=session, limit=limit, offset=offset, name=name)
 
 
 @router.get(
     "/{plan_id}",
     response_model=PlanRead,
     status_code=status.HTTP_200_OK,
+    summary="Get plan",
+    description="Returns one plan by id.",
     dependencies=[Depends(require_roles(*PLAN_MANAGEMENT_ROLES))],
 )
 async def get_plan(
@@ -59,6 +67,8 @@ async def get_plan(
     "/{plan_id}",
     response_model=PlanRead,
     status_code=status.HTTP_200_OK,
+    summary="Update plan",
+    description="Updates plan data after validating unique plan name.",
     dependencies=[Depends(require_roles(*PLAN_MANAGEMENT_ROLES))],
 )
 async def update_plan(
@@ -74,6 +84,8 @@ async def update_plan(
     "/{plan_id}",
     response_model=PlanRead,
     status_code=status.HTTP_200_OK,
+    summary="Deactivate plan",
+    description="Soft deletes a plan by changing status to INACTIVE.",
     dependencies=[Depends(require_roles(*PLAN_MANAGEMENT_ROLES))],
 )
 async def delete_plan(

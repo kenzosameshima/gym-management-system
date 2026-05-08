@@ -1,20 +1,33 @@
-from collections.abc import Sequence
-
 from fastapi import Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.enums import PlanStatus
 from app.core.exceptions import ApplicationError
-from app.models.plan import Plan, PlanStatus
+from app.models.plan import Plan
 from app.repositories.plan_repository import PlanRepository, get_plan_repository
-from app.schemas.plan import PlanCreate, PlanUpdate
+from app.schemas.pagination import Page
+from app.schemas.plan import PlanCreate, PlanRead, PlanUpdate
 
 
 class PlanService:
     def __init__(self, repository: PlanRepository) -> None:
         self._repository = repository
 
-    async def list_plans(self, session: AsyncSession) -> Sequence[Plan]:
-        return await self._repository.list(session)
+    async def list_plans(
+        self,
+        session: AsyncSession,
+        *,
+        limit: int,
+        offset: int,
+        name: str | None = None,
+    ) -> Page[PlanRead]:
+        plans, total = await self._repository.list(
+            session,
+            limit=limit,
+            offset=offset,
+            name=name,
+        )
+        return Page[PlanRead](items=list(plans), total=total, limit=limit, offset=offset)
 
     async def get_plan(self, session: AsyncSession, plan_id: int) -> Plan:
         plan = await self._repository.get_by_id(session, plan_id)

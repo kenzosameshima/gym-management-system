@@ -3,7 +3,7 @@ from decimal import Decimal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.models.plan import PlanStatus
+from app.core.enums import PlanStatus
 
 
 class PlanCreate(BaseModel):

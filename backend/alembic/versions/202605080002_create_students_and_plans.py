@@ -33,7 +33,7 @@ def upgrade() -> None:
             sa.Column("address", sa.Text(), nullable=True),
             sa.Column(
                 "status",
-                sa.Enum("ACTIVE", "INACTIVE", "DEFAULTER", native_enum=False, length=20),
+                sa.Enum("ACTIVE", "INACTIVE", native_enum=False, length=20),
                 nullable=False,
             ),
             sa.Column(

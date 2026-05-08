@@ -4,8 +4,11 @@ from contextlib import asynccontextmanager
 import structlog
 from fastapi import FastAPI
 
+from app.api.access_control import router as access_control_router
 from app.api.auth import router as auth_router
+from app.api.enrollments import router as enrollments_router
 from app.api.health import router as health_router
+from app.api.payments import router as payments_router
 from app.api.plans import router as plans_router
 from app.api.students import router as students_router
 from app.core.config import get_settings
@@ -37,6 +40,9 @@ def create_app() -> FastAPI:
     app.include_router(auth_router)
     app.include_router(students_router)
     app.include_router(plans_router)
+    app.include_router(enrollments_router)
+    app.include_router(payments_router)
+    app.include_router(access_control_router)
     app.include_router(health_router)
 
     return app

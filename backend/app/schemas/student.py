@@ -3,7 +3,7 @@ from datetime import date, datetime
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
-from app.models.student import StudentStatus
+from app.core.enums import StudentStatus
 
 CPF_PATTERN = re.compile(r"^\d{3}\.\d{3}\.\d{3}-\d{2}$|^\d{11}$")
 

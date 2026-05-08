@@ -1,6 +1,6 @@
 # Architecture Overview
 
-The project starts with a layered backend and a minimal React frontend.
+The project uses a layered FastAPI backend and a React frontend.
 
 Backend flow:
 
@@ -14,13 +14,36 @@ Repository Layer
 Database Layer
 ```
 
-Current Phase 1 responsibilities:
+Current responsibilities:
 
-- API layer exposes health endpoints only.
-- Service layer owns readiness orchestration and error mapping.
-- Repository layer owns database connectivity checks.
+- API layer receives HTTP input, applies authentication/authorization dependencies, and returns response models.
+- Service layer owns business rules, transaction boundaries, and error mapping.
+- Repository layer owns persistence operations and query composition, but does not decide business transactions.
 - Database layer owns async SQLAlchemy engine and session factory.
-- Core modules own configuration, logging, middleware, and exception handling.
+- Core modules own configuration, domain enums, logging, middleware, and exception handling.
 
-No gym domain models, migrations, authentication flows, CRUDs, or dashboards are included in this phase.
+Domain enums are centralized in `backend/app/core/enums.py`.
 
+Student status represents only cadastral state:
+
+- `ACTIVE`
+- `INACTIVE`
+
+Delinquency is derived from payments, not stored on the student. Payment statuses are:
+
+- `PENDING`
+- `PAID`
+- `OVERDUE`
+
+Plan statuses are:
+
+- `ACTIVE`
+- `INACTIVE`
+
+Enrollment statuses are:
+
+- `ACTIVE`
+- `EXPIRED`
+- `CANCELLED`
+
+Access control is calculated by `AccessControlService`. Access is allowed only when the student exists, is active, has an active non-expired enrollment, and the active enrollment has no overdue payment. Every access attempt creates an `AccessLog`, including nonexistent CPF attempts, with `cpf_attempted`, `student_id` when known, timestamp, allowed flag, and denial reason.

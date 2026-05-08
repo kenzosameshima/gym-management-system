@@ -21,13 +21,13 @@ Repository Layer
 Database Layer
 ```
 
-Routes do not access the database directly. Configuration, logging, middleware, and global exception handling live in `backend/app/core`.
+Routes do not access the database directly. Configuration, logging, middleware, global exception handling, and domain enums live in `backend/app/core`.
 
 ## Folder Structure
 
 ```text
 backend/app/api          FastAPI routers
-backend/app/core         config, logging, middleware, exceptions
+backend/app/core         config, logging, middleware, exceptions, domain enums
 backend/app/database     async engine, sessions, declarative base
 backend/app/repositories data access boundaries
 backend/app/services     application orchestration
@@ -188,7 +188,9 @@ Student rules:
 - `cpf` is required, unique, and must contain 11 digits or use `000.000.000-00`.
 - `email` is required, valid, and unique.
 - `birth_date` cannot be in the future.
+- `status` represents only the cadastral state of the student: `ACTIVE` or `INACTIVE`.
 - `DELETE` performs a soft delete by setting `status` to `INACTIVE`.
+- Delinquency is never persisted as `Student.status`; it is derived from payment state.
 
 ## Plans
 
@@ -213,7 +215,34 @@ Plan rules:
 - `name` is required and unique.
 - `price` must be greater than zero.
 - `duration_days` must be greater than zero.
+- `status` can be `ACTIVE` or `INACTIVE`.
 - `DELETE` performs a soft delete by setting `status` to `INACTIVE`.
+
+## Enrollments, Payments, And Access Control
+
+Enrollment status values:
+
+- `ACTIVE`
+- `EXPIRED`
+- `CANCELLED`
+
+Payment status values:
+
+- `PENDING`
+- `PAID`
+- `OVERDUE`
+
+Financial delinquency is derived from payments. A student is considered blocked for payment reasons only when the active enrollment has an overdue payment, including pending payments whose due date has passed and are normalized to `OVERDUE`.
+
+Access control is calculated by `AccessControlService`. The API layer only receives input and delegates the decision. Access is allowed only when:
+
+- the student exists;
+- `Student.status` is `ACTIVE`;
+- the student has an active enrollment;
+- the enrollment has not expired;
+- the active enrollment has no overdue payment.
+
+Every access check creates an `AccessLog`, including failed checks for nonexistent CPF values. Access logs store `cpf_attempted`, `student_id` when known, `accessed_at`, `allowed`, and the denial reason when access is blocked.
 
 ## Alembic
 

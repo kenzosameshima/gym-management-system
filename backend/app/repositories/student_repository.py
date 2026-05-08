@@ -1,6 +1,6 @@
 from collections.abc import Sequence
 
-from sqlalchemy import select
+from sqlalchemy import Select, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.student import Student
@@ -8,9 +8,21 @@ from app.schemas.student import StudentCreate, StudentUpdate
 
 
 class StudentRepository:
-    async def list(self, session: AsyncSession) -> Sequence[Student]:
-        result = await session.execute(select(Student).order_by(Student.id))
-        return result.scalars().all()
+    async def list(
+        self,
+        session: AsyncSession,
+        *,
+        limit: int,
+        offset: int,
+        search: str | None = None,
+        cpf: str | None = None,
+        email: str | None = None,
+        name: str | None = None,
+    ) -> tuple[Sequence[Student], int]:
+        statement = self._filtered_statement(search=search, cpf=cpf, email=email, name=name)
+        total_result = await session.execute(select(func.count()).select_from(statement.subquery()))
+        result = await session.execute(statement.order_by(Student.id).limit(limit).offset(offset))
+        return result.scalars().all(), total_result.scalar_one()
 
     async def get_by_id(self, session: AsyncSession, student_id: int) -> Student | None:
         return await session.get(Student, student_id)
@@ -41,6 +53,32 @@ class StudentRepository:
         await session.flush()
         await session.refresh(student)
         return student
+
+    def _filtered_statement(
+        self,
+        *,
+        search: str | None,
+        cpf: str | None,
+        email: str | None,
+        name: str | None,
+    ) -> Select[tuple[Student]]:
+        statement = select(Student)
+        if search:
+            term = f"%{search}%"
+            statement = statement.where(
+                or_(
+                    Student.name.ilike(term),
+                    Student.cpf.ilike(term),
+                    Student.email.ilike(term),
+                )
+            )
+        if cpf:
+            statement = statement.where(Student.cpf == cpf)
+        if email:
+            statement = statement.where(Student.email == email)
+        if name:
+            statement = statement.where(Student.name.ilike(f"%{name}%"))
+        return statement
 
 
 def get_student_repository() -> StudentRepository:
