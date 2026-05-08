@@ -1,0 +1,49 @@
+# Environment
+.env
+**/.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+*.pyc
+*.pyo
+*.pyd
+.coverage
+htmlcov/
+coverage/
+
+# PyCharm / VSCode
+.idea/
+.vscode/
+
+# Logs
+*.log
+
+# Frontend
+node_modules/
+dist/
+build/
+
+# Vite
+vite.svg
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+*.pid
+
+# Alembic
+backend/alembic/versions/*.pyc
+
+# Local overrides
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
