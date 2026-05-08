@@ -68,3 +68,20 @@ Reports are read-only. Aggregated queries stay out of CRUD services. `ReportRepo
 Revenue reports use `Payment.due_date` for optional `start_date` and `end_date` filters. Invalid ranges return 422. Reporting access is role-protected: `ADMIN` can access all reports, `RECEPTIONIST` can access management and financial reports, and `INSTRUCTOR` can access workout summary only.
 
 Reporting indexes are maintained through Alembic for payment status/date, access timestamps, and exercise progress timestamps, while existing indexes on students and enrollment relationships are reused.
+
+Frontend integration is organized as a routed React application:
+
+- `frontend/src/api` contains typed Axios wrappers for auth, students, plans, enrollments, payments, access control, workouts, and reports.
+- `frontend/src/contexts/AuthContext.tsx` owns JWT token state, localStorage persistence, `/api/auth/me` hydration, and logout.
+- `frontend/src/routes` owns protected routes and role gates.
+- `frontend/src/layouts/AppLayout.tsx` provides the authenticated shell and navigation.
+- `frontend/src/pages` contains the first operational screens for dashboard, CRUD workflows, access checks, workouts, and reports.
+
+The frontend stores the access token in localStorage for this phase and attaches it through the shared Axios client. Navigation is role-aware and hides inaccessible areas, but backend authorization remains the source of truth.
+
+Known frontend limitations:
+
+- Refresh tokens are not implemented because the backend does not expose them.
+- Reporting uses simple tables and stat cards, not charts or exports.
+- Access log history is not displayed because there is no backend list endpoint for recent access attempts.
+- Relationship selection is ID-based in the first integration pass.

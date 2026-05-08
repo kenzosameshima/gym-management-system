@@ -313,6 +313,49 @@ Report rules:
 - Temporal filters are optional `start_date` and `end_date`; when both are present, `start_date` must be less than or equal to `end_date`.
 - Reporting indexes exist for payment status and due date, access timestamps, and exercise progress timestamps. Existing student, enrollment, and exercise relationship indexes are reused.
 
+## Frontend Integration
+
+The React frontend now provides the first functional UI over the backend API.
+
+Routes:
+
+```text
+/login
+/dashboard
+/students
+/plans
+/enrollments
+/payments
+/access-control
+/workouts
+/reports
+```
+
+`/` redirects to `/dashboard`, and unknown routes render a not-found page.
+
+Authentication flow:
+
+- `/login` posts credentials to `/api/auth/login`.
+- The returned JWT access token is stored in `localStorage` under `gym_management_access_token`.
+- The app loads the authenticated user from `/api/auth/me`.
+- The shared Axios client attaches `Authorization: Bearer <token>` to API requests.
+- Logout clears local token state and redirects protected screens back through the auth guard.
+
+Role-based navigation hides screens that the current user cannot access:
+
+- `ADMIN`: dashboard, students, plans, enrollments, payments, access control, workouts, and reports.
+- `RECEPTIONIST`: dashboard, students, plans, enrollments, payments, access control, reports, and read-only workout views.
+- `INSTRUCTOR`: dashboard, read-only students, workouts, and workout summary reporting.
+
+Frontend API modules live under `frontend/src/api` and use the shared Axios client plus TypeScript domain types from `frontend/src/types`. The frontend does not bypass backend authorization; hidden navigation is only a usability layer.
+
+Known limitations for this phase:
+
+- No refresh-token flow; expired sessions require logging in again.
+- No advanced charts or PDF/CSV exports.
+- Access-control recent attempts are not shown because the backend does not currently expose a list endpoint for access logs.
+- Student, plan, enrollment, and workout references are entered by ID in this phase.
+
 ## Alembic
 
 Migrations are configured for SQLAlchemy async and read `DATABASE_URL` from environment settings.
