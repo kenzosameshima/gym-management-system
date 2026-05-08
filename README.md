@@ -277,6 +277,42 @@ Workout rules:
 - Exercises cannot be created in inactive workout plans.
 - Exercise progress is historical; every record is appended and never overwrites prior progress.
 
+## Reports And Analytics
+
+Report endpoints are backend-only in this phase:
+
+```bash
+GET /api/reports/students/active
+GET /api/reports/students/defaulters
+GET /api/reports/plans/most-used
+GET /api/reports/revenue/summary
+GET /api/reports/access/daily
+GET /api/reports/workouts/summary
+```
+
+Reports are read-only. Routes delegate to `ReportService`, and reporting SQL stays in
+`ReportRepository` instead of CRUD repositories or services.
+
+Permissions:
+
+- `ADMIN`: all reports.
+- `RECEPTIONIST`: active students, defaulters, most-used plans, revenue summary, and daily access.
+- `INSTRUCTOR`: workout summary only.
+
+Report rules:
+
+- Active students are students with `Student.status = ACTIVE`.
+- Defaulters are derived from `Payment.status = OVERDUE`; delinquency is not stored on `Student.status`.
+- Most-used plans count enrollments grouped by plan.
+- Revenue summary uses `Payment.due_date` for date filtering.
+- `expected_revenue` is the sum of `PENDING`, `PAID`, and `OVERDUE` payments in the period.
+- `received_revenue` is the sum of `PAID` payments in the period.
+- `overdue_revenue` is the sum of `OVERDUE` payments in the period.
+- `pending_revenue` is the sum of `PENDING` payments in the period.
+- Daily access groups `AccessLog.accessed_at` by day and counts allowed and blocked attempts.
+- Temporal filters are optional `start_date` and `end_date`; when both are present, `start_date` must be less than or equal to `end_date`.
+- Reporting indexes exist for payment status and due date, access timestamps, and exercise progress timestamps. Existing student, enrollment, and exercise relationship indexes are reused.
+
 ## Alembic
 
 Migrations are configured for SQLAlchemy async and read `DATABASE_URL` from environment settings.

@@ -22,10 +22,11 @@ class Payment(Base):
         nullable=False,
     )
     amount: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
-    due_date: Mapped[date] = mapped_column(Date, nullable=False)
+    due_date: Mapped[date] = mapped_column(Date, index=True, nullable=False)
     payment_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     status: Mapped[PaymentStatus] = mapped_column(
         Enum(PaymentStatus, native_enum=False, length=20),
+        index=True,
         nullable=False,
         default=PaymentStatus.PENDING,
     )

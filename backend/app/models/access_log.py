@@ -23,6 +23,7 @@ class AccessLog(Base):
     cpf_attempted: Mapped[str] = mapped_column(String(14), index=True, nullable=False)
     accessed_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
+        index=True,
         server_default=func.now(),
         nullable=False,
     )

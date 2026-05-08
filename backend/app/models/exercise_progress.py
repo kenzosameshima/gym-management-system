@@ -22,6 +22,7 @@ class ExerciseProgress(Base):
     repetitions: Mapped[int] = mapped_column(nullable=False)
     recorded_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
+        index=True,
         server_default=func.now(),
         nullable=False,
     )

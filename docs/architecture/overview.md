@@ -55,3 +55,16 @@ Workout domain is split into workout plans, exercises, and exercise progress:
 - `ExerciseProgress` is append-only history for student progress on an exercise.
 
 Workout plan and exercise writes are restricted to `ADMIN` and `INSTRUCTOR`. `RECEPTIONIST` can read workout data but cannot create or edit it.
+
+Reports are implemented as a dedicated analytics layer:
+
+- API: `backend/app/api/reports.py`
+- Service: `backend/app/services/report_service.py`
+- Repository: `backend/app/repositories/report_repository.py`
+- Schemas: `backend/app/schemas/reports.py`
+
+Reports are read-only. Aggregated queries stay out of CRUD services. `ReportRepository` uses SQL aggregates, joins, and grouping for active students, defaulters, plan usage, revenue, daily access, and workout summaries. Financial delinquency is derived from `Payment.status = OVERDUE`.
+
+Revenue reports use `Payment.due_date` for optional `start_date` and `end_date` filters. Invalid ranges return 422. Reporting access is role-protected: `ADMIN` can access all reports, `RECEPTIONIST` can access management and financial reports, and `INSTRUCTOR` can access workout summary only.
+
+Reporting indexes are maintained through Alembic for payment status/date, access timestamps, and exercise progress timestamps, while existing indexes on students and enrollment relationships are reused.
