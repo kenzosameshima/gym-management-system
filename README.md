@@ -1,10 +1,11 @@
 # Gym Management System
 
-Base full-stack foundation for a future gym management platform. Phase 1 focuses on architecture, infrastructure, observability, PostgreSQL connectivity, and code quality only.
+Base full-stack foundation for a future gym management platform. The current foundation includes infrastructure, observability, PostgreSQL connectivity, code quality, and initial JWT authentication with user roles.
 
 ## Stack
 
 - Backend: Python 3.12, FastAPI, SQLAlchemy 2 async, AsyncPG, Alembic, Pydantic Settings, Structlog
+- Auth: JWT, passlib/bcrypt password hashing, role-based access foundations
 - Frontend: React 18, TypeScript, Vite, Axios
 - Infra: Docker, Docker Compose, PostgreSQL 16, Nginx
 - Quality: Ruff, Black, MyPy, Pytest, Pre-commit
@@ -64,6 +65,8 @@ Backend variables are documented in `backend/.env.example`:
 - `SECRET_KEY`
 - `DATABASE_URL`
 - `BACKEND_CORS_ORIGINS`
+- `JWT_ALGORITHM`
+- `ACCESS_TOKEN_EXPIRE_MINUTES`
 
 Frontend variables are documented in `frontend/.env.example`:
 
@@ -121,9 +124,52 @@ Expected responses:
 
 The readiness endpoint validates a real async PostgreSQL connection.
 
+## Authentication
+
+Available authentication endpoints:
+
+```bash
+POST /api/auth/register
+POST /api/auth/login
+GET /api/auth/me
+```
+
+Register example:
+
+```bash
+curl -X POST http://localhost:8000/api/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"email":"admin@example.com","full_name":"Admin User","password":"strong-password","role":"ADMIN"}'
+```
+
+Login example:
+
+```bash
+curl -X POST http://localhost:8000/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"admin@example.com","password":"strong-password"}'
+```
+
+Authenticated user example:
+
+```bash
+curl http://localhost:8000/api/auth/me \
+  -H "Authorization: Bearer <access_token>"
+```
+
+Supported roles:
+
+- `ADMIN`
+- `RECEPTIONIST`
+- `INSTRUCTOR`
+
+User responses never expose `password_hash`.
+
 ## Alembic
 
 Migrations are configured for SQLAlchemy async and read `DATABASE_URL` from environment settings.
+
+The backend container runs `alembic upgrade head` before starting Uvicorn.
 
 Example:
 

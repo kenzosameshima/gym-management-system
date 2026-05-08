@@ -29,6 +29,8 @@ class Settings(BaseSettings):
     DATABASE_POOL_SIZE: int = Field(default=5, ge=1)
     DATABASE_MAX_OVERFLOW: int = Field(default=10, ge=0)
     DATABASE_POOL_TIMEOUT: int = Field(default=30, ge=1)
+    JWT_ALGORITHM: str = Field(default="HS256", min_length=1)
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = Field(default=30, ge=1)
 
     @property
     def cors_origins(self) -> list[str]:

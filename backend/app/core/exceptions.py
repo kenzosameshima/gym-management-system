@@ -1,5 +1,5 @@
 import structlog
-from fastapi import FastAPI, Request, status
+from fastapi import FastAPI, HTTPException, Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
@@ -70,6 +70,25 @@ async def validation_error_handler(
     )
 
 
+async def http_exception_handler(
+    request: Request,
+    exc: Exception,
+) -> JSONResponse:
+    if not isinstance(exc, HTTPException):
+        return await unhandled_exception_handler(request, exc)
+
+    logger.warning(
+        "http_exception",
+        path=request.url.path,
+        status_code=exc.status_code,
+    )
+    return build_error_response(
+        "HTTP_ERROR",
+        "Request could not be completed.",
+        exc.status_code,
+    )
+
+
 async def unhandled_exception_handler(
     request: Request,
     exc: Exception,
@@ -88,5 +107,6 @@ async def unhandled_exception_handler(
 
 def register_exception_handlers(app: FastAPI) -> None:
     app.add_exception_handler(ApplicationError, application_error_handler)
+    app.add_exception_handler(HTTPException, http_exception_handler)
     app.add_exception_handler(RequestValidationError, validation_error_handler)
     app.add_exception_handler(Exception, unhandled_exception_handler)
