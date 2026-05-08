@@ -3,7 +3,7 @@ from collections.abc import Sequence
 from fastapi import APIRouter, Depends, Query, status
 
 from app.auth.permissions import require_roles
-from app.core.enums import UserRole
+from app.core.enums import UserRole, WorkoutPlanStatus
 from app.database.session import AsyncSessionDependency
 from app.models.exercise import Exercise
 from app.models.exercise_progress import ExerciseProgress
@@ -58,9 +58,19 @@ async def list_workout_plans(
     session: AsyncSessionDependency,
     limit: int = Query(default=20, gt=0, le=100),
     offset: int = Query(default=0, ge=0),
+    student_search: str | None = Query(default=None, min_length=1, max_length=320),
+    instructor_search: str | None = Query(default=None, min_length=1, max_length=320),
+    workout_status: WorkoutPlanStatus | None = Query(default=None, alias="status"),
     service: WorkoutPlanService = Depends(get_workout_plan_service),
 ) -> Page[WorkoutPlanRead]:
-    return await service.list_workout_plans(session=session, limit=limit, offset=offset)
+    return await service.list_workout_plans(
+        session=session,
+        limit=limit,
+        offset=offset,
+        student_search=student_search,
+        instructor_search=instructor_search,
+        status=workout_status,
+    )
 
 
 @router.get(

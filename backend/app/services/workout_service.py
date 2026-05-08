@@ -47,12 +47,18 @@ class WorkoutPlanService:
         limit: int,
         offset: int,
         student_id: int | None = None,
+        student_search: str | None = None,
+        instructor_search: str | None = None,
+        status: WorkoutPlanStatus | None = None,
     ) -> Page[WorkoutPlanRead]:
         workout_plans, total = await self._repository.list(
             session,
             limit=limit,
             offset=offset,
             student_id=student_id,
+            student_search=student_search,
+            instructor_search=instructor_search,
+            status=status,
         )
         return Page[WorkoutPlanRead](
             items=list(workout_plans),

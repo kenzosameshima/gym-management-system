@@ -356,6 +356,37 @@ Known limitations for this phase:
 - Access-control recent attempts are not shown because the backend does not currently expose a list endpoint for access logs.
 - Student, plan, enrollment, and workout references are entered by ID in this phase.
 
+## Dashboard And Operational UX
+
+The dashboard is an operational overview backed by report endpoints only. It does not duplicate analytics rules in the frontend.
+
+Role behavior:
+
+- `ADMIN`: active students, defaulters, full revenue summary, daily access metrics, plan usage, and workout activity.
+- `RECEPTIONIST`: active students, defaulters, revenue summary, daily access metrics, and plan usage.
+- `INSTRUCTOR`: workout plan and exercise progress summary.
+
+Charts use Recharts:
+
+- revenue split by received, overdue, and pending;
+- daily access allowed versus blocked;
+- most-used plans;
+- workout activity.
+
+Operational filtering:
+
+- Students: name, CPF, email, and status.
+- Plans: name and status.
+- Enrollments: student search and status.
+- Payments: student search, status, and overdue-only filter.
+- Workout plans: student search, instructor search, and status.
+
+The reusable table component supports loading and empty states, sortable columns, pagination controls, responsive overflow, sticky headers, and consistent row actions.
+
+Frontend notifications use `react-hot-toast` for login, create/update/delete, access checks, and API failure feedback. Invalid or expired tokens trigger token cleanup and session re-authentication through the protected-route flow.
+
+Responsive behavior focuses on desktop and tablet operation. The sidebar compresses on narrower screens, tables scroll horizontally, and dashboard cards/charts stack responsively.
+
 ## Alembic
 
 Migrations are configured for SQLAlchemy async and read `DATABASE_URL` from environment settings.

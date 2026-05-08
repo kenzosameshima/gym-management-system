@@ -40,6 +40,7 @@ class EnrollmentService:
         student_id: int | None = None,
         plan_id: int | None = None,
         status: EnrollmentStatus | None = None,
+        student_search: str | None = None,
     ) -> Page[EnrollmentRead]:
         enrollments, total = await self._repository.list(
             session,
@@ -48,6 +49,7 @@ class EnrollmentService:
             student_id=student_id,
             plan_id=plan_id,
             status=status,
+            student_search=student_search,
         )
         return Page[EnrollmentRead](
             items=list(enrollments),

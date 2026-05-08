@@ -1,10 +1,13 @@
 from collections.abc import Sequence
 
-from sqlalchemy import Select, func, select
+from sqlalchemy import Select, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.enums import WorkoutPlanStatus
 from app.models.exercise import Exercise
 from app.models.exercise_progress import ExerciseProgress
+from app.models.student import Student
+from app.models.user import User
 from app.models.workout_plan import WorkoutPlan
 from app.schemas.workout import (
     ExerciseCreate,
@@ -23,8 +26,16 @@ class WorkoutPlanRepository:
         limit: int,
         offset: int,
         student_id: int | None = None,
+        student_search: str | None = None,
+        instructor_search: str | None = None,
+        status: WorkoutPlanStatus | None = None,
     ) -> tuple[Sequence[WorkoutPlan], int]:
-        statement = self._filtered_statement(student_id=student_id)
+        statement = self._filtered_statement(
+            student_id=student_id,
+            student_search=student_search,
+            instructor_search=instructor_search,
+            status=status,
+        )
         total_result = await session.execute(select(func.count()).select_from(statement.subquery()))
         result = await session.execute(
             statement.order_by(WorkoutPlan.id).limit(limit).offset(offset)
@@ -57,10 +68,33 @@ class WorkoutPlanRepository:
         await session.refresh(workout_plan)
         return workout_plan
 
-    def _filtered_statement(self, *, student_id: int | None) -> Select[tuple[WorkoutPlan]]:
+    def _filtered_statement(
+        self,
+        *,
+        student_id: int | None,
+        student_search: str | None,
+        instructor_search: str | None,
+        status: WorkoutPlanStatus | None,
+    ) -> Select[tuple[WorkoutPlan]]:
         statement = select(WorkoutPlan)
         if student_id is not None:
             statement = statement.where(WorkoutPlan.student_id == student_id)
+        if status is not None:
+            statement = statement.where(WorkoutPlan.status == status)
+        if student_search:
+            term = f"%{student_search}%"
+            statement = statement.join(Student, Student.id == WorkoutPlan.student_id).where(
+                or_(
+                    Student.name.ilike(term),
+                    Student.cpf.ilike(term),
+                    Student.email.ilike(term),
+                )
+            )
+        if instructor_search:
+            term = f"%{instructor_search}%"
+            statement = statement.join(User, User.id == WorkoutPlan.instructor_id).where(
+                or_(User.full_name.ilike(term), User.email.ilike(term))
+            )
         return statement
 
 

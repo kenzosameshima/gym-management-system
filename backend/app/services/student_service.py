@@ -23,6 +23,7 @@ class StudentService:
         cpf: str | None = None,
         email: str | None = None,
         name: str | None = None,
+        status: StudentStatus | None = None,
     ) -> Page[StudentRead]:
         students, total = await self._repository.list(
             session,
@@ -32,6 +33,7 @@ class StudentService:
             cpf=cpf,
             email=email,
             name=name,
+            status=status,
         )
         return Page[StudentRead](items=list(students), total=total, limit=limit, offset=offset)
 

@@ -43,6 +43,7 @@ async def list_payments(
     offset: int = Query(default=0, ge=0),
     enrollment_id: int | None = Query(default=None, gt=0),
     payment_status: PaymentStatus | None = Query(default=None, alias="status"),
+    student_search: str | None = Query(default=None, min_length=1, max_length=320),
     service: PaymentService = Depends(get_payment_service),
 ) -> Page[PaymentRead]:
     return await service.list_payments(
@@ -51,6 +52,7 @@ async def list_payments(
         offset=offset,
         enrollment_id=enrollment_id,
         status_filter=payment_status,
+        student_search=student_search,
     )
 
 

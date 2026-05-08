@@ -32,6 +32,7 @@ class PaymentService:
         offset: int,
         enrollment_id: int | None = None,
         status_filter: PaymentStatus | None = None,
+        student_search: str | None = None,
     ) -> Page[PaymentRead]:
         payments, total = await self._repository.list(
             session,
@@ -39,6 +40,7 @@ class PaymentService:
             offset=offset,
             enrollment_id=enrollment_id,
             status=status_filter,
+            student_search=student_search,
         )
         return Page[PaymentRead](items=list(payments), total=total, limit=limit, offset=offset)
 

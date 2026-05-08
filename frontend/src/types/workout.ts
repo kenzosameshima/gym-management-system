@@ -29,6 +29,9 @@ export interface WorkoutPlanUpdatePayload {
 
 export interface WorkoutPlanQueryParams extends PageQueryParams {
   student_id?: number;
+  student_search?: string;
+  instructor_search?: string;
+  status?: Status;
 }
 
 export interface Exercise {
@@ -72,4 +75,3 @@ export interface ExerciseProgressPayload {
   repetitions: number;
   notes?: string | null;
 }
-

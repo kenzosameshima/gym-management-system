@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, Query, status
 
 from app.auth.permissions import require_roles
-from app.core.enums import UserRole
+from app.core.enums import StudentStatus, UserRole
 from app.database.session import AsyncSessionDependency
 from app.models.student import Student
 from app.schemas.pagination import Page
@@ -47,6 +47,7 @@ async def list_students(
     cpf: str | None = Query(default=None, min_length=11, max_length=14),
     email: str | None = Query(default=None, min_length=3, max_length=320),
     name: str | None = Query(default=None, min_length=1, max_length=255),
+    student_status: StudentStatus | None = Query(default=None, alias="status"),
     service: StudentService = Depends(get_student_service),
 ) -> Page[StudentRead]:
     return await service.list_students(
@@ -57,6 +58,7 @@ async def list_students(
         cpf=cpf,
         email=email,
         name=name,
+        status=student_status,
     )
 
 

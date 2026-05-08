@@ -181,6 +181,40 @@ async def test_filter_students_by_cpf_email_and_name(client: AsyncClient) -> Non
     assert name_response.json()["total"] == 1
 
 
+async def test_filter_students_by_status(client: AsyncClient) -> None:
+    headers = await auth_headers(client)
+    await client.post("/api/students", json=student_payload(), headers=headers)
+    await client.post(
+        "/api/students",
+        json=student_payload(cpf="98765432100", email="inactive@example.com", status="INACTIVE"),
+        headers=headers,
+    )
+
+    response = await client.get("/api/students?status=INACTIVE", headers=headers)
+
+    assert response.status_code == 200
+    assert response.json()["total"] == 1
+    assert response.json()["items"][0]["status"] == "INACTIVE"
+
+
+async def test_filter_plans_by_status(client: AsyncClient) -> None:
+    headers = await auth_headers(client)
+    active_response = await client.post("/api/plans", json=plan_payload(), headers=headers)
+    inactive_response = await client.post(
+        "/api/plans",
+        json={**plan_payload(name="Inactive Plan"), "status": "INACTIVE"},
+        headers=headers,
+    )
+
+    response = await client.get("/api/plans?status=INACTIVE", headers=headers)
+
+    assert active_response.status_code == 201
+    assert inactive_response.status_code == 201
+    assert response.status_code == 200
+    assert response.json()["total"] == 1
+    assert response.json()["items"][0]["status"] == "INACTIVE"
+
+
 async def test_soft_delete_plan(client: AsyncClient) -> None:
     headers = await auth_headers(client)
     create_response = await client.post("/api/plans", json=plan_payload(), headers=headers)

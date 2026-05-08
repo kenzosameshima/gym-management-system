@@ -69,6 +69,37 @@ async def test_create_enrollment_generates_initial_payment(client: AsyncClient) 
     assert payments_response.json()["items"][0]["amount"] == "99.90"
 
 
+async def test_filter_enrollments_and_payments_by_student_search(
+    client: AsyncClient,
+) -> None:
+    headers = await auth_headers(client)
+    student_id, plan_id = await create_student_and_plan(client, headers)
+    enrollment_response = await client.post(
+        "/api/enrollments",
+        json={
+            "student_id": student_id,
+            "plan_id": plan_id,
+            "start_date": "2026-05-08",
+        },
+        headers=headers,
+    )
+
+    enrollments_response = await client.get(
+        "/api/enrollments?student_search=Student",
+        headers=headers,
+    )
+    payments_response = await client.get(
+        "/api/payments?student_search=12345678901",
+        headers=headers,
+    )
+
+    assert enrollment_response.status_code == 201
+    assert enrollments_response.status_code == 200
+    assert enrollments_response.json()["total"] == 1
+    assert payments_response.status_code == 200
+    assert payments_response.json()["total"] == 1
+
+
 async def test_access_allowed_with_active_enrollment_and_no_overdue_payments(
     client: AsyncClient,
 ) -> None:

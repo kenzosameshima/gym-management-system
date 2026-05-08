@@ -28,5 +28,5 @@ export interface StudentQueryParams extends PageQueryParams {
   cpf?: string;
   email?: string;
   name?: string;
+  status?: Status;
 }
-

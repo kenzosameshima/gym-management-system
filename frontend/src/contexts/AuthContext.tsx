@@ -28,6 +28,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }): JSX.E
   }, []);
 
   useEffect(() => {
+    window.addEventListener("auth:logout", logout);
+    return () => {
+      window.removeEventListener("auth:logout", logout);
+    };
+  }, [logout]);
+
+  useEffect(() => {
     let isMounted = true;
     async function hydrateUser(): Promise<void> {
       if (token === null) {
@@ -91,4 +98,3 @@ export function useAuth(): AuthContextValue {
   }
   return context;
 }
-

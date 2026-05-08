@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, Query, status
 
 from app.auth.permissions import require_roles
-from app.core.enums import UserRole
+from app.core.enums import PlanStatus, UserRole
 from app.database.session import AsyncSessionDependency
 from app.models.plan import Plan
 from app.schemas.pagination import Page
@@ -42,9 +42,16 @@ async def list_plans(
     limit: int = Query(default=20, gt=0, le=100),
     offset: int = Query(default=0, ge=0),
     name: str | None = Query(default=None, min_length=1, max_length=255),
+    plan_status: PlanStatus | None = Query(default=None, alias="status"),
     service: PlanService = Depends(get_plan_service),
 ) -> Page[PlanRead]:
-    return await service.list_plans(session=session, limit=limit, offset=offset, name=name)
+    return await service.list_plans(
+        session=session,
+        limit=limit,
+        offset=offset,
+        name=name,
+        status=plan_status,
+    )
 
 
 @router.get(

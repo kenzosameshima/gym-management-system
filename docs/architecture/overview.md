@@ -85,3 +85,24 @@ Known frontend limitations:
 - Reporting uses simple tables and stat cards, not charts or exports.
 - Access log history is not displayed because there is no backend list endpoint for recent access attempts.
 - Relationship selection is ID-based in the first integration pass.
+
+Phase 8 adds operational UX structure on top of the first integration:
+
+- Dashboard cards and charts consume only the reporting API.
+- Recharts renders revenue, daily access, plan usage, and workout activity visualizations.
+- `DataTable` centralizes loading, empty, sorting, pagination, sticky headers, and responsive overflow behavior.
+- `react-hot-toast` provides lightweight user feedback for auth, mutations, access checks, and API failures.
+- Access control keeps recent checks in frontend session state because access-log listing is intentionally not exposed by the backend.
+- Backend filtering was extended minimally where the UI needed server-side support: student and plan status filters, student search for enrollments and payments, and student/instructor/status filters for workout plans.
+
+The dashboard remains role-aware:
+
+- `ADMIN` sees management, financial, access, plan usage, and workout metrics.
+- `RECEPTIONIST` sees management, financial, access, and plan usage metrics.
+- `INSTRUCTOR` sees workout summary metrics only.
+
+Known Phase 8 limitations:
+
+- Charts are simple operational summaries, not an advanced analytics engine.
+- Relationship selection remains ID-based.
+- Tablet responsiveness is prioritized; mobile polish remains limited.

@@ -20,12 +20,14 @@ class PlanService:
         limit: int,
         offset: int,
         name: str | None = None,
+        status: PlanStatus | None = None,
     ) -> Page[PlanRead]:
         plans, total = await self._repository.list(
             session,
             limit=limit,
             offset=offset,
             name=name,
+            status=status,
         )
         return Page[PlanRead](items=list(plans), total=total, limit=limit, offset=offset)
 

@@ -3,6 +3,7 @@ from collections.abc import Sequence
 from sqlalchemy import Select, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.enums import PlanStatus
 from app.models.plan import Plan
 from app.schemas.plan import PlanCreate, PlanUpdate
 
@@ -15,8 +16,9 @@ class PlanRepository:
         limit: int,
         offset: int,
         name: str | None = None,
+        status: PlanStatus | None = None,
     ) -> tuple[Sequence[Plan], int]:
-        statement = self._filtered_statement(name=name)
+        statement = self._filtered_statement(name=name, status=status)
         total_result = await session.execute(select(func.count()).select_from(statement.subquery()))
         result = await session.execute(statement.order_by(Plan.id).limit(limit).offset(offset))
         return result.scalars().all(), total_result.scalar_one()
@@ -42,10 +44,17 @@ class PlanRepository:
         await session.refresh(plan)
         return plan
 
-    def _filtered_statement(self, *, name: str | None) -> Select[tuple[Plan]]:
+    def _filtered_statement(
+        self,
+        *,
+        name: str | None,
+        status: PlanStatus | None,
+    ) -> Select[tuple[Plan]]:
         statement = select(Plan)
         if name:
             statement = statement.where(Plan.name.ilike(f"%{name}%"))
+        if status is not None:
+            statement = statement.where(Plan.status == status)
         return statement
 
 

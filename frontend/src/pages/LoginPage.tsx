@@ -1,4 +1,5 @@
 import { FormEvent, useState } from "react";
+import toast from "react-hot-toast";
 import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import { ErrorState } from "../components/ErrorState";
 import { useAuth } from "../contexts/AuthContext";
@@ -26,8 +27,10 @@ export function LoginPage(): JSX.Element {
       const redirectTo = typeof location.state === "object" && location.state !== null && "from" in location.state
         ? "/dashboard"
         : "/dashboard";
+      toast.success("Signed in.");
       navigate(redirectTo, { replace: true });
     } catch (submitError) {
+      toast.error("Sign in failed.");
       setError(getErrorMessage(submitError));
     } finally {
       setIsSaving(false);
@@ -62,4 +65,3 @@ export function LoginPage(): JSX.Element {
     </main>
   );
 }
-

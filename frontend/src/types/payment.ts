@@ -29,5 +29,5 @@ export interface PaymentUpdatePayload {
 export interface PaymentQueryParams extends PageQueryParams {
   enrollment_id?: number;
   status?: PaymentStatus;
+  student_search?: string;
 }
-

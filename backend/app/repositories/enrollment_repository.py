@@ -1,10 +1,11 @@
 from collections.abc import Sequence
 
-from sqlalchemy import Select, func, select
+from sqlalchemy import Select, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.enums import EnrollmentStatus
 from app.models.enrollment import Enrollment
+from app.models.student import Student
 from app.schemas.enrollment import EnrollmentUpdate
 
 
@@ -18,8 +19,14 @@ class EnrollmentRepository:
         student_id: int | None = None,
         plan_id: int | None = None,
         status: EnrollmentStatus | None = None,
+        student_search: str | None = None,
     ) -> tuple[Sequence[Enrollment], int]:
-        statement = self._filtered_statement(student_id=student_id, plan_id=plan_id, status=status)
+        statement = self._filtered_statement(
+            student_id=student_id,
+            plan_id=plan_id,
+            status=status,
+            student_search=student_search,
+        )
         total_result = await session.execute(select(func.count()).select_from(statement.subquery()))
         result = await session.execute(
             statement.order_by(Enrollment.id).limit(limit).offset(offset)
@@ -69,6 +76,7 @@ class EnrollmentRepository:
         student_id: int | None,
         plan_id: int | None,
         status: EnrollmentStatus | None,
+        student_search: str | None,
     ) -> Select[tuple[Enrollment]]:
         statement = select(Enrollment)
         if student_id is not None:
@@ -77,6 +85,15 @@ class EnrollmentRepository:
             statement = statement.where(Enrollment.plan_id == plan_id)
         if status is not None:
             statement = statement.where(Enrollment.status == status)
+        if student_search:
+            term = f"%{student_search}%"
+            statement = statement.join(Student, Student.id == Enrollment.student_id).where(
+                or_(
+                    Student.name.ilike(term),
+                    Student.cpf.ilike(term),
+                    Student.email.ilike(term),
+                )
+            )
         return statement
 
 

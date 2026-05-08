@@ -1,4 +1,5 @@
 import { FormEvent, useEffect, useState } from "react";
+import toast from "react-hot-toast";
 import {
   createExercise,
   createExerciseProgress,
@@ -15,6 +16,7 @@ import { DataTable, type Column } from "../components/DataTable";
 import { ErrorState } from "../components/ErrorState";
 import { LoadingState } from "../components/LoadingState";
 import { useAuth } from "../contexts/AuthContext";
+import { useSortableRows } from "../hooks/useSortableRows";
 import type { Page } from "../types/common";
 import type { Exercise, ExercisePayload, ExerciseProgress, WorkoutPlan, WorkoutPlanPayload } from "../types/workout";
 import { formatDateTime, getErrorMessage, STATUS_OPTIONS } from "./pageUtils";
@@ -30,6 +32,9 @@ export function WorkoutPlansPage(): JSX.Element {
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [progress, setProgress] = useState<ExerciseProgress[]>([]);
   const [planForm, setPlanForm] = useState<WorkoutPlanPayload>(EMPTY_PLAN);
+  const [studentSearch, setStudentSearch] = useState("");
+  const [instructorSearch, setInstructorSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"" | WorkoutPlanPayload["status"]>("");
   const [exerciseForm, setExerciseForm] = useState<ExercisePayload>(EMPTY_EXERCISE);
   const [editingPlanId, setEditingPlanId] = useState<number | null>(null);
   const [editingExerciseId, setEditingExerciseId] = useState<number | null>(null);
@@ -38,10 +43,16 @@ export function WorkoutPlansPage(): JSX.Element {
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  async function loadPlans(): Promise<void> {
+  async function loadPlans(offset = page?.offset ?? 0): Promise<void> {
     setIsLoading(true);
     try {
-      setPage(await getWorkoutPlans({ limit: 50, offset: 0 }));
+      setPage(await getWorkoutPlans({
+        limit: 20,
+        offset,
+        student_search: studentSearch || undefined,
+        instructor_search: instructorSearch || undefined,
+        status: statusFilter || undefined
+      }));
     } catch (loadError) {
       setError(getErrorMessage(loadError));
     } finally {
@@ -71,8 +82,10 @@ export function WorkoutPlansPage(): JSX.Element {
       }
       setPlanForm(EMPTY_PLAN);
       setEditingPlanId(null);
+      toast.success(editingPlanId === null ? "Workout plan created." : "Workout plan updated.");
       await loadPlans();
     } catch (submitError) {
+      toast.error("Workout plan save failed.");
       setError(getErrorMessage(submitError));
     } finally {
       setIsSaving(false);
@@ -93,8 +106,10 @@ export function WorkoutPlansPage(): JSX.Element {
       }
       setExerciseForm(EMPTY_EXERCISE);
       setEditingExerciseId(null);
+      toast.success(editingExerciseId === null ? "Exercise added." : "Exercise updated.");
       setExercises(await getExercises(selectedPlan.id));
     } catch (submitError) {
+      toast.error("Exercise save failed.");
       setError(getErrorMessage(submitError));
     } finally {
       setIsSaving(false);
@@ -117,8 +132,10 @@ export function WorkoutPlansPage(): JSX.Element {
         notes: String(formData.get("notes") ?? "") || null
       });
       setProgress(await getExerciseProgressByStudentAndExercise(selectedPlan.student_id, selectedExerciseId));
+      toast.success("Progress registered.");
       event.currentTarget.reset();
     } catch (submitError) {
+      toast.error("Progress save failed.");
       setError(getErrorMessage(submitError));
     } finally {
       setIsSaving(false);
@@ -126,11 +143,11 @@ export function WorkoutPlansPage(): JSX.Element {
   }
 
   const planColumns: Column<WorkoutPlan>[] = [
-    { key: "id", header: "ID", render: (plan) => plan.id },
+    { key: "id", header: "ID", render: (plan) => plan.id, sortValue: (plan) => plan.id },
     { key: "student", header: "Student", render: (plan) => plan.student_id },
     { key: "instructor", header: "Instructor", render: (plan) => plan.instructor_id },
-    { key: "goal", header: "Goal", render: (plan) => plan.goal },
-    { key: "status", header: "Status", render: (plan) => plan.status },
+    { key: "goal", header: "Goal", render: (plan) => plan.goal, sortValue: (plan) => plan.goal },
+    { key: "status", header: "Status", render: (plan) => plan.status, sortValue: (plan) => plan.status },
     {
       key: "actions",
       header: "Actions",
@@ -138,7 +155,7 @@ export function WorkoutPlansPage(): JSX.Element {
         <div className="row-actions">
           <button type="button" className="secondary" onClick={() => void selectPlan(plan)}>Open</button>
           {canWrite && <button type="button" className="secondary" onClick={() => { setEditingPlanId(plan.id); setPlanForm({ student_id: plan.student_id, instructor_id: plan.instructor_id, goal: plan.goal, notes: plan.notes ?? "", status: plan.status }); }}>Edit</button>}
-          {canWrite && <button type="button" className="danger" onClick={() => { if (confirm("Deactivate this workout plan?")) void deleteWorkoutPlan(plan.id).then(loadPlans); }}>Delete</button>}
+          {canWrite && <button type="button" className="danger" onClick={() => { if (confirm("Deactivate this workout plan?")) void deleteWorkoutPlan(plan.id).then(() => { toast.success("Workout plan deactivated."); return loadPlans(); }); }}>Delete</button>}
         </div>
       )
     }
@@ -157,16 +174,26 @@ export function WorkoutPlansPage(): JSX.Element {
         <div className="row-actions">
           <button type="button" className="secondary" onClick={() => { setSelectedExerciseId(exercise.id); if (selectedPlan !== null) void getExerciseProgressByStudentAndExercise(selectedPlan.student_id, exercise.id).then(setProgress); }}>Progress</button>
           {canWrite && <button type="button" className="secondary" onClick={() => { setEditingExerciseId(exercise.id); setExerciseForm({ name: exercise.name, muscle_group: exercise.muscle_group, sets: exercise.sets, repetitions: exercise.repetitions, load: exercise.load ?? "", notes: exercise.notes ?? "", status: exercise.status }); }}>Edit</button>}
-          {canWrite && <button type="button" className="danger" onClick={() => { if (confirm("Deactivate this exercise?") && selectedPlan !== null) void deleteExercise(exercise.id).then(() => getExercises(selectedPlan.id)).then(setExercises); }}>Delete</button>}
+          {canWrite && <button type="button" className="danger" onClick={() => { if (confirm("Deactivate this exercise?") && selectedPlan !== null) void deleteExercise(exercise.id).then(() => { toast.success("Exercise deactivated."); return getExercises(selectedPlan.id); }).then(setExercises); }}>Delete</button>}
         </div>
       )
     }
   ];
+  const sortedPlans = useSortableRows(page?.items ?? [], planColumns);
 
   return (
     <section className="page-stack">
       <header className="page-header"><h1>Workout Plans</h1></header>
       {error !== null && <ErrorState message={error} />}
+      <form className="toolbar" onSubmit={(event) => { event.preventDefault(); void loadPlans(0); }}>
+        <label>Student<input placeholder="Name, CPF, or email" value={studentSearch} onChange={(event) => setStudentSearch(event.target.value)} /></label>
+        <label>Instructor<input placeholder="Name or email" value={instructorSearch} onChange={(event) => setInstructorSearch(event.target.value)} /></label>
+        <label>Status<select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as "" | WorkoutPlanPayload["status"])}>
+          <option value="">All</option>
+          {STATUS_OPTIONS.map((status) => <option key={status}>{status}</option>)}
+        </select></label>
+        <button type="submit">Filter</button>
+      </form>
       {canWrite && (
         <form className="panel form-grid" onSubmit={handlePlanSubmit}>
           <input type="number" min="1" placeholder="Student ID" value={planForm.student_id || ""} onChange={(event) => setPlanForm({ ...planForm, student_id: Number(event.target.value) })} required />
@@ -177,7 +204,7 @@ export function WorkoutPlansPage(): JSX.Element {
           <button type="submit" disabled={isSaving}>{isSaving ? "Saving..." : editingPlanId === null ? "Create plan" : "Update plan"}</button>
         </form>
       )}
-      {isLoading || page === null ? <LoadingState /> : <DataTable columns={planColumns} rows={page.items} getRowKey={(plan) => plan.id} emptyMessage="No workout plans found." />}
+      {page === null ? <LoadingState /> : <DataTable columns={planColumns} rows={sortedPlans.rows} getRowKey={(plan) => plan.id} emptyMessage="No workout plans found." isLoading={isLoading} total={page.total} limit={page.limit} offset={page.offset} onPageChange={(nextOffset) => void loadPlans(nextOffset)} sortKey={sortedPlans.sortKey} sortDirection={sortedPlans.sortDirection} onSortChange={sortedPlans.setSortKey} />}
       {selectedPlan !== null && (
         <section className="page-stack">
           <h2>Exercises for plan {selectedPlan.id}</h2>
@@ -194,6 +221,16 @@ export function WorkoutPlansPage(): JSX.Element {
             </form>
           )}
           <DataTable columns={exerciseColumns} rows={exercises} getRowKey={(exercise) => exercise.id} emptyMessage="No exercises found." />
+          <div className="exercise-groups">
+            {exercises.map((exercise) => (
+              <details key={exercise.id} className="panel" open={exercise.id === selectedExerciseId}>
+                <summary>{exercise.name} - {exercise.muscle_group} - {exercise.sets}x{exercise.repetitions}</summary>
+                <p>Status: {exercise.status}</p>
+                <p>Load: {exercise.load ?? "-"}</p>
+                <p>{exercise.notes ?? "No notes."}</p>
+              </details>
+            ))}
+          </div>
           {canWrite && selectedExerciseId !== null && (
             <form className="panel form-grid" onSubmit={handleProgressSubmit}>
               <input name="load" placeholder="Load" />
@@ -218,4 +255,3 @@ export function WorkoutPlansPage(): JSX.Element {
     </section>
   );
 }
-

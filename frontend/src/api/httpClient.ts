@@ -19,3 +19,13 @@ httpClient.interceptors.request.use((config) => {
   return config;
 });
 
+httpClient.interceptors.response.use(
+  (response) => response,
+  (error: unknown) => {
+    if (axios.isAxiosError(error) && error.response?.status === 401) {
+      localStorage.removeItem(AUTH_TOKEN_STORAGE_KEY);
+      window.dispatchEvent(new Event("auth:logout"));
+    }
+    return Promise.reject(error);
+  }
+);

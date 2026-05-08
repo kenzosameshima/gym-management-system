@@ -46,6 +46,7 @@ async def list_enrollments(
     student_id: int | None = Query(default=None, gt=0),
     plan_id: int | None = Query(default=None, gt=0),
     enrollment_status: EnrollmentStatus | None = Query(default=None, alias="status"),
+    student_search: str | None = Query(default=None, min_length=1, max_length=320),
     service: EnrollmentService = Depends(get_enrollment_service),
 ) -> Page[EnrollmentRead]:
     return await service.list_enrollments(
@@ -55,6 +56,7 @@ async def list_enrollments(
         student_id=student_id,
         plan_id=plan_id,
         status=enrollment_status,
+        student_search=student_search,
     )
 
 

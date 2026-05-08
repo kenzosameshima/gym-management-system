@@ -3,6 +3,7 @@ from collections.abc import Sequence
 from sqlalchemy import Select, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.enums import StudentStatus
 from app.models.student import Student
 from app.schemas.student import StudentCreate, StudentUpdate
 
@@ -18,8 +19,15 @@ class StudentRepository:
         cpf: str | None = None,
         email: str | None = None,
         name: str | None = None,
+        status: StudentStatus | None = None,
     ) -> tuple[Sequence[Student], int]:
-        statement = self._filtered_statement(search=search, cpf=cpf, email=email, name=name)
+        statement = self._filtered_statement(
+            search=search,
+            cpf=cpf,
+            email=email,
+            name=name,
+            status=status,
+        )
         total_result = await session.execute(select(func.count()).select_from(statement.subquery()))
         result = await session.execute(statement.order_by(Student.id).limit(limit).offset(offset))
         return result.scalars().all(), total_result.scalar_one()
@@ -61,6 +69,7 @@ class StudentRepository:
         cpf: str | None,
         email: str | None,
         name: str | None,
+        status: StudentStatus | None,
     ) -> Select[tuple[Student]]:
         statement = select(Student)
         if search:
@@ -78,6 +87,8 @@ class StudentRepository:
             statement = statement.where(Student.email == email)
         if name:
             statement = statement.where(Student.name.ilike(f"%{name}%"))
+        if status is not None:
+            statement = statement.where(Student.status == status)
         return statement
 
 

@@ -30,5 +30,5 @@ export interface EnrollmentQueryParams extends PageQueryParams {
   student_id?: number;
   plan_id?: number;
   status?: EnrollmentStatus;
+  student_search?: string;
 }
-

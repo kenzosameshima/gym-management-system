@@ -19,5 +19,5 @@ export interface PlanPayload {
 
 export interface PlanQueryParams extends PageQueryParams {
   name?: string;
+  status?: Status;
 }
-
