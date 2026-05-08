@@ -6,6 +6,8 @@ from fastapi import FastAPI
 
 from app.api.auth import router as auth_router
 from app.api.health import router as health_router
+from app.api.plans import router as plans_router
+from app.api.students import router as students_router
 from app.core.config import get_settings
 from app.core.exceptions import register_exception_handlers
 from app.core.logging import configure_logging
@@ -33,6 +35,8 @@ def create_app() -> FastAPI:
     register_middlewares(app, settings)
     register_exception_handlers(app)
     app.include_router(auth_router)
+    app.include_router(students_router)
+    app.include_router(plans_router)
     app.include_router(health_router)
 
     return app

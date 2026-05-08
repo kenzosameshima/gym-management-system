@@ -165,6 +165,56 @@ Supported roles:
 
 User responses never expose `password_hash`.
 
+## Students
+
+All student endpoints require JWT authentication.
+
+```bash
+POST /api/students
+GET /api/students
+GET /api/students/{student_id}
+PUT /api/students/{student_id}
+DELETE /api/students/{student_id}
+```
+
+Permissions:
+
+- `ADMIN`: full access
+- `RECEPTIONIST`: full access
+- `INSTRUCTOR`: read-only access to `GET /api/students` and `GET /api/students/{student_id}`
+
+Student rules:
+
+- `cpf` is required, unique, and must contain 11 digits or use `000.000.000-00`.
+- `email` is required, valid, and unique.
+- `birth_date` cannot be in the future.
+- `DELETE` performs a soft delete by setting `status` to `INACTIVE`.
+
+## Plans
+
+All plan endpoints require JWT authentication.
+
+```bash
+POST /api/plans
+GET /api/plans
+GET /api/plans/{plan_id}
+PUT /api/plans/{plan_id}
+DELETE /api/plans/{plan_id}
+```
+
+Permissions:
+
+- `ADMIN`: full access
+- `RECEPTIONIST`: full access
+- `INSTRUCTOR`: no access to plan endpoints
+
+Plan rules:
+
+- `name` is required and unique.
+- `price` must be greater than zero.
+- `duration_days` must be greater than zero.
+- `DELETE` performs a soft delete by setting `status` to `INACTIVE`.
+
 ## Alembic
 
 Migrations are configured for SQLAlchemy async and read `DATABASE_URL` from environment settings.
