@@ -1,6 +1,6 @@
 # Architecture Overview
 
-The project uses a layered FastAPI backend and a React frontend.
+The project uses a layered FastAPI backend and a React frontend. The v1.0.0 MVP covers authentication, students, plans, enrollments, payments, access control, workouts, reports, and dashboard workflows.
 
 Backend flow:
 
@@ -82,9 +82,8 @@ The frontend stores the access token in localStorage for this phase and attaches
 Known frontend limitations:
 
 - Refresh tokens are not implemented because the backend does not expose them.
-- Reporting uses simple tables and stat cards, not charts or exports.
-- Access log history is not displayed because there is no backend list endpoint for recent access attempts.
-- Relationship selection is ID-based in the first integration pass.
+- Reporting and dashboard charts are operational summaries, not advanced analytics or exports.
+- Relationship selection remains ID-based in some operational forms.
 
 Phase 8 adds operational UX structure on top of the first integration:
 
@@ -120,3 +119,10 @@ Phase 9 hardening adds release-candidate stability work:
 - Docker supports a production backend install mode without development dependencies through `INSTALL_DEV=false`.
 
 Production configuration is separated through `.env.production.example` files for backend and frontend. Production deployments must use unique secrets, explicit CORS origins, `DEBUG=false`, and environment-specific API/database URLs.
+
+Phase 10 prepares the v1.0.0 release candidate:
+
+- Backend OpenAPI metadata and package metadata are aligned to `1.0.0`.
+- Docker Compose starts the backend without development reload by default and still applies Alembic migrations before startup.
+- README, changelog, release notes, contributor guidance, and AI-agent guidance document release validation and known limitations.
+- The MVP intentionally excludes payment gateway integration, refresh tokens, email notifications, CSV/PDF exports, hardware/catraca integration, mobile apps, Redis, Kubernetes, and CI/CD pipelines.

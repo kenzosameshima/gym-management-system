@@ -33,7 +33,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 def create_app() -> FastAPI:
     app = FastAPI(
         title=settings.APP_NAME,
-        version="0.8.0-beta",
+        version="1.0.0",
         summary="Gym management API",
         description=(
             "Layered async API for authentication, students, plans, enrollments, "

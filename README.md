@@ -1,6 +1,20 @@
 # Gym Management System
 
-Base full-stack foundation for a future gym management platform. The current foundation includes infrastructure, observability, PostgreSQL connectivity, code quality, and initial JWT authentication with user roles.
+Stable MVP release candidate for a full-stack gym management platform. The application covers authentication, role-based authorization, students, plans, enrollments, payments, CPF-based access control, workout plans, exercise progress, reports, and a role-aware operational dashboard.
+
+Current release preparation target: `v1.0.0` (`1.0.0` metadata, unreleased until the final tag).
+
+## Features
+
+- JWT login/logout flow with protected frontend routes and backend role checks.
+- Student and plan CRUD with validation, filtering/search, and soft delete.
+- Enrollment creation/listing with inactive student and inactive plan prevention.
+- Payment registration, payment status updates, overdue handling, and duplicate paid-payment protection.
+- CPF access checks with allowed/blocked decisions, denial reasons, and access-log creation.
+- Workout plans, exercises, exercise soft delete, progress recording, and progress history.
+- Reports for active students, defaulters, most-used plans, revenue, daily access, and workout summary.
+- Dashboard cards and charts that hide restricted metrics by role.
+- Dockerized PostgreSQL, backend, production frontend, and Vite development frontend.
 
 ## Stack
 
@@ -8,7 +22,7 @@ Base full-stack foundation for a future gym management platform. The current fou
 - Auth: JWT, passlib/bcrypt password hashing, role-based access foundations
 - Frontend: React 18, TypeScript, Vite, Axios
 - Infra: Docker, Docker Compose, PostgreSQL 16, Nginx
-- Quality: Ruff, Black, MyPy, Pytest, Pre-commit
+- Quality: Ruff, Black, MyPy, Pytest, TypeScript build checks, Pre-commit
 
 ## Architecture
 
@@ -22,6 +36,14 @@ Database Layer
 ```
 
 Routes do not access the database directly. Configuration, logging, middleware, global exception handling, and domain enums live in `backend/app/core`.
+
+The React frontend follows a routed page structure:
+
+```text
+Routes -> Pages -> API modules -> Axios client -> Backend API
+```
+
+`AuthContext` owns token persistence, `/api/auth/me` hydration, logout, and session cleanup. Navigation is role-aware, but backend authorization remains the source of truth.
 
 ## Folder Structure
 
@@ -47,6 +69,10 @@ Services:
 - Frontend: http://localhost:3000
 - Backend: http://localhost:8000
 - PostgreSQL: localhost:5432
+- Swagger/OpenAPI: http://localhost:8000/docs
+- ReDoc: http://localhost:8000/redoc
+
+The backend container runs `alembic upgrade head` before starting Uvicorn without development reload. PostgreSQL data is persisted in the `postgres_data` Docker volume. Resetting local data requires `docker compose down -v`; use it only when local data can be discarded.
 
 Development frontend with Vite hot reload:
 
@@ -298,7 +324,7 @@ Workout rules:
 
 ## Reports And Analytics
 
-Report endpoints are backend-only in this phase:
+Report endpoints:
 
 ```bash
 GET /api/reports/students/active
@@ -370,11 +396,14 @@ Frontend API modules live under `frontend/src/api` and use the shared Axios clie
 
 Route-level lazy loading is used for heavier operational screens such as dashboard, reports, workouts, payments, and enrollments. Chart code is loaded with those routes instead of the initial login shell.
 
-Known limitations for this phase:
+Known limitations for this release:
 
 - No refresh-token flow; expired sessions require logging in again.
 - No advanced charts or PDF/CSV exports.
-- Access-control recent attempts are not shown because the backend does not currently expose a list endpoint for access logs.
+- No real payment gateway integration.
+- No email notifications.
+- No real turnstile/catraca or hardware integration.
+- No mobile app.
 - Student, plan, enrollment, and workout references are entered by ID in this phase.
 
 ## Dashboard And Operational UX
@@ -431,6 +460,16 @@ docker compose up --build -d
 docker compose ps
 ```
 
+Optional clean database validation:
+
+```bash
+docker compose down -v
+docker compose up --build -d
+docker compose ps
+```
+
+Only run the clean database validation when local database contents can be discarded.
+
 ## Alembic
 
 Migrations are configured for SQLAlchemy async and read `DATABASE_URL` from environment settings.
@@ -450,9 +489,33 @@ Backend logs are structured JSON via Structlog and include timestamp, level, ser
 
 ## Security Notes
 
+- Password hashes are stored server-side and are never returned in API responses.
+- JWTs are bearer tokens; protect `SECRET_KEY` and rotate it if exposed.
+- The MVP frontend stores the JWT in `localStorage`, which is acceptable for this release but not equivalent to a hardened refresh-token/session design.
+- Production CORS must list explicit origins.
+- Example credentials and passwords in Compose/env examples are development placeholders only.
+
 `npm audit` currently reports two moderate vulnerabilities from `esbuild <=0.24.2`, pulled transitively by Vite. The advisory affects the Vite development server behavior. The production frontend image builds static assets and serves them with Nginx, so this issue is not part of the runtime container surface.
 
 `npm audit fix` does not resolve it without `--force`; npm proposes upgrading to Vite 8, which is a breaking major upgrade. Do not run `npm audit fix --force` automatically. Revisit this when planning a controlled frontend tooling upgrade.
+
+## Release Notes
+
+Detailed v1.0.0 release notes are in `docs/releases/v1.0.0.md`.
+
+Recommended demo path:
+
+1. Log in as admin.
+2. Create a plan.
+3. Create a student.
+4. Enroll the student.
+5. Register a payment.
+6. Check access by CPF.
+7. Create a workout plan.
+8. Add an exercise.
+9. Record exercise progress.
+10. Open reports.
+11. Open the dashboard.
 
 ## Troubleshooting
 

@@ -1,7 +1,7 @@
 [project]
 name = "gym-management-backend"
-version = "0.1.0"
-description = "Backend foundation for the gym management system."
+version = "1.0.0"
+description = "Async FastAPI backend for the gym management system MVP."
 requires-python = ">=3.12"
 dependencies = [
     "alembic>=1.13.2,<2.0.0",
