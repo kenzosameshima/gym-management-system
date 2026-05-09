@@ -296,6 +296,12 @@ class ExerciseProgressService:
         exercise = await self._exercise_repository.get_by_id(session, exercise_id)
         if exercise is None:
             raise ApplicationError("EXERCISE_NOT_FOUND", "Exercise was not found.", 404)
+        if exercise.status != ExerciseStatus.ACTIVE:
+            raise ApplicationError(
+                "EXERCISE_INACTIVE",
+                "Exercise is inactive.",
+                status.HTTP_409_CONFLICT,
+            )
 
 
 def get_workout_plan_service(

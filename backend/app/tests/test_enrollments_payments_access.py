@@ -69,6 +69,29 @@ async def test_create_enrollment_generates_initial_payment(client: AsyncClient) 
     assert payments_response.json()["items"][0]["amount"] == "99.90"
 
 
+async def test_block_duplicate_payment_processing(client: AsyncClient) -> None:
+    headers = await auth_headers(client)
+    student_id, plan_id = await create_student_and_plan(client, headers)
+    enrollment_response = await client.post(
+        "/api/enrollments",
+        json={
+            "student_id": student_id,
+            "plan_id": plan_id,
+            "start_date": "2026-05-08",
+        },
+        headers=headers,
+    )
+    payment_id = (await client.get("/api/payments", headers=headers)).json()["items"][0]["id"]
+
+    first_response = await client.patch(f"/api/payments/{payment_id}/pay", headers=headers)
+    second_response = await client.patch(f"/api/payments/{payment_id}/pay", headers=headers)
+
+    assert enrollment_response.status_code == 201
+    assert first_response.status_code == 200
+    assert second_response.status_code == 409
+    assert second_response.json()["error"]["code"] == "PAYMENT_ALREADY_PROCESSED"
+
+
 async def test_filter_enrollments_and_payments_by_student_search(
     client: AsyncClient,
 ) -> None:

@@ -71,6 +71,12 @@ class PaymentService:
         payload: PaymentUpdate,
     ) -> Payment:
         payment = await self.get_payment(session, payment_id)
+        if payment.status == PaymentStatus.PAID:
+            raise ApplicationError(
+                code="PAYMENT_ALREADY_PROCESSED",
+                message="Paid payments cannot be processed again.",
+                status_code=status.HTTP_409_CONFLICT,
+            )
         try:
             updated_payment = await self._repository.update(session, payment, payload)
             await session.commit()
@@ -81,6 +87,13 @@ class PaymentService:
             raise
 
     async def mark_payment_paid(self, session: AsyncSession, payment_id: int) -> Payment:
+        payment = await self.get_payment(session, payment_id)
+        if payment.status == PaymentStatus.PAID:
+            raise ApplicationError(
+                code="PAYMENT_ALREADY_PROCESSED",
+                message="Payment is already paid.",
+                status_code=status.HTTP_409_CONFLICT,
+            )
         return await self.update_payment(
             session,
             payment_id,

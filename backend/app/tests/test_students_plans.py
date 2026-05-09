@@ -60,6 +60,30 @@ async def test_create_student_authenticated(client: AsyncClient) -> None:
     assert response.json()["cpf"] == "12345678901"
 
 
+async def test_create_student_normalizes_formatted_cpf(client: AsyncClient) -> None:
+    response = await client.post(
+        "/api/students",
+        json=student_payload(cpf="123.456.789-01"),
+        headers=await auth_headers(client),
+    )
+
+    assert response.status_code == 201
+    assert response.json()["cpf"] == "12345678901"
+
+
+async def test_block_student_with_unreasonable_birth_date(client: AsyncClient) -> None:
+    payload = student_payload()
+    payload["birth_date"] = "1800-01-01"
+
+    response = await client.post(
+        "/api/students",
+        json=payload,
+        headers=await auth_headers(client),
+    )
+
+    assert response.status_code == 422
+
+
 async def test_block_student_with_duplicate_cpf(client: AsyncClient) -> None:
     headers = await auth_headers(client)
     first_response = await client.post("/api/students", json=student_payload(), headers=headers)

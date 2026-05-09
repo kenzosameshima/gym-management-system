@@ -68,9 +68,13 @@ Backend variables are documented in `backend/.env.example`:
 - `JWT_ALGORITHM`
 - `ACCESS_TOKEN_EXPIRE_MINUTES`
 
+For production-like configuration, use `backend/.env.production.example` as a starting point. Production settings must use `APP_ENV=production`, `DEBUG=false`, a unique `SECRET_KEY`, explicit CORS origins, and real database credentials.
+
 Frontend variables are documented in `frontend/.env.example`:
 
 - `VITE_API_URL`
+
+For production frontend builds, use `frontend/.env.production.example` and point `VITE_API_URL` to the deployed API origin.
 
 For real deployments, create non-versioned `.env` files and replace all development credentials and secrets.
 
@@ -164,6 +168,21 @@ Supported roles:
 - `INSTRUCTOR`
 
 User responses never expose `password_hash`.
+
+## API Overview
+
+The backend exposes grouped REST APIs under `/api`:
+
+- `/api/auth`: registration, login, and current user.
+- `/api/students`: student lifecycle and search.
+- `/api/plans`: plan lifecycle and search.
+- `/api/enrollments`: enrollment creation, cancellation, and filtering.
+- `/api/payments`: payment registration, status changes, and filtering.
+- `/api/access-control`: operational CPF access checks.
+- `/api/workout-plans`, `/api/exercises`, `/api/exercise-progress`: workout domain.
+- `/api/reports`: read-only analytics.
+
+Swagger/OpenAPI is available from the backend service and includes route tags, response models, and JWT bearer auth integration.
 
 ## Students
 
@@ -349,6 +368,8 @@ Role-based navigation hides screens that the current user cannot access:
 
 Frontend API modules live under `frontend/src/api` and use the shared Axios client plus TypeScript domain types from `frontend/src/types`. The frontend does not bypass backend authorization; hidden navigation is only a usability layer.
 
+Route-level lazy loading is used for heavier operational screens such as dashboard, reports, workouts, payments, and enrollments. Chart code is loaded with those routes instead of the initial login shell.
+
 Known limitations for this phase:
 
 - No refresh-token flow; expired sessions require logging in again.
@@ -386,6 +407,29 @@ The reusable table component supports loading and empty states, sortable columns
 Frontend notifications use `react-hot-toast` for login, create/update/delete, access checks, and API failure feedback. Invalid or expired tokens trigger token cleanup and session re-authentication through the protected-route flow.
 
 Responsive behavior focuses on desktop and tablet operation. The sidebar compresses on narrower screens, tables scroll horizontally, and dashboard cards/charts stack responsively.
+
+## Production Notes
+
+- Do not deploy with the development `SECRET_KEY` or database password.
+- Do not use wildcard CORS origins in production; the settings layer rejects them when `APP_ENV=production`.
+- Backend request logs include request id, method, path, status code, duration, and authenticated user id when a valid token is present.
+- Unexpected exceptions are logged server-side and returned to clients as sanitized error responses.
+- The backend Dockerfile supports `INSTALL_DEV=false` for production dependency installation without development tooling.
+- The frontend production image serves static assets through Nginx.
+
+## Validation Workflow
+
+Before release, run:
+
+```bash
+docker compose run --rm backend pytest
+docker compose run --rm backend ruff check .
+docker compose run --rm backend mypy app
+docker compose run --rm frontend-dev npm run build
+docker compose run --rm frontend-dev npm run lint
+docker compose up --build -d
+docker compose ps
+```
 
 ## Alembic
 

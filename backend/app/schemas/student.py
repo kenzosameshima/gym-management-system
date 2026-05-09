@@ -1,5 +1,5 @@
 import re
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
@@ -22,13 +22,15 @@ class StudentBase(BaseModel):
     def validate_cpf(cls, value: str) -> str:
         if CPF_PATTERN.fullmatch(value) is None:
             raise ValueError("CPF must contain 11 digits or use 000.000.000-00 format.")
-        return value
+        return re.sub(r"\D", "", value)
 
     @field_validator("birth_date")
     @classmethod
     def validate_birth_date(cls, value: date) -> date:
         if value > date.today():
             raise ValueError("Birth date cannot be in the future.")
+        if value < date.today() - timedelta(days=365 * 120):
+            raise ValueError("Birth date is outside the supported age range.")
         return value
 
 
@@ -50,13 +52,15 @@ class StudentUpdate(BaseModel):
     def validate_cpf(cls, value: str | None) -> str | None:
         if value is not None and CPF_PATTERN.fullmatch(value) is None:
             raise ValueError("CPF must contain 11 digits or use 000.000.000-00 format.")
-        return value
+        return re.sub(r"\D", "", value) if value is not None else None
 
     @field_validator("birth_date")
     @classmethod
     def validate_birth_date(cls, value: date | None) -> date | None:
         if value is not None and value > date.today():
             raise ValueError("Birth date cannot be in the future.")
+        if value is not None and value < date.today() - timedelta(days=365 * 120):
+            raise ValueError("Birth date is outside the supported age range.")
         return value
 
 

@@ -1,7 +1,7 @@
 from enum import StrEnum
 from functools import lru_cache
 
-from pydantic import Field, PostgresDsn
+from pydantic import Field, PostgresDsn, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -31,6 +31,17 @@ class Settings(BaseSettings):
     DATABASE_POOL_TIMEOUT: int = Field(default=30, ge=1)
     JWT_ALGORITHM: str = Field(default="HS256", min_length=1)
     ACCESS_TOKEN_EXPIRE_MINUTES: int = Field(default=30, ge=1)
+
+    @model_validator(mode="after")
+    def validate_production_settings(self) -> "Settings":
+        if self.APP_ENV == AppEnvironment.PRODUCTION:
+            if self.DEBUG:
+                raise ValueError("DEBUG must be false in production.")
+            if "*" in self.cors_origins:
+                raise ValueError("Wildcard CORS origins are not allowed in production.")
+            if self.SECRET_KEY == "local-development-secret-key-change-before-production":
+                raise ValueError("SECRET_KEY must be changed in production.")
+        return self
 
     @property
     def cors_origins(self) -> list[str]:

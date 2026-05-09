@@ -106,3 +106,17 @@ Known Phase 8 limitations:
 - Charts are simple operational summaries, not an advanced analytics engine.
 - Relationship selection remains ID-based.
 - Tablet responsiveness is prioritized; mobile polish remains limited.
+
+Phase 9 hardening adds release-candidate stability work:
+
+- Backend validation normalizes CPF values and rejects unreasonable student birth dates.
+- Payment processing rejects duplicate paid-payment processing.
+- Exercise progress requires active exercises.
+- JWT edge cases for expired, malformed, and invalid-signature tokens are covered by tests.
+- CORS is explicit and production settings reject wildcard origins.
+- Request logging includes a request id, HTTP method, path, status code, response duration, and authenticated user id when a valid token is present.
+- Frontend heavy routes are lazy-loaded with `React.lazy` and `Suspense`.
+- API error messaging distinguishes network failures, timeouts, expired sessions, and permission failures.
+- Docker supports a production backend install mode without development dependencies through `INSTALL_DEV=false`.
+
+Production configuration is separated through `.env.production.example` files for backend and frontend. Production deployments must use unique secrets, explicit CORS origins, `DEBUG=false`, and environment-specific API/database URLs.

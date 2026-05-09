@@ -6,6 +6,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONPATH=/app
 
 WORKDIR /app
+ARG INSTALL_DEV=true
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends gcc libpq-dev curl \
@@ -14,10 +15,10 @@ RUN apt-get update \
 COPY pyproject.toml ./
 COPY app ./app
 RUN pip install --upgrade pip \
-    && pip install ".[dev]"
+    && if [ "$INSTALL_DEV" = "true" ]; then pip install ".[dev]"; else pip install "."; fi
 
 COPY . .
 
 EXPOSE 8000
 
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

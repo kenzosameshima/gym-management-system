@@ -187,6 +187,38 @@ async def test_register_exercise_progress(client: AsyncClient) -> None:
     assert response.json()["repetitions"] == 11
 
 
+async def test_block_progress_for_inactive_exercise(client: AsyncClient) -> None:
+    admin_headers = await auth_headers(client)
+    instructor_headers, instructor_id = await auth_headers_and_user_id(client, "INSTRUCTOR")
+    student_id = await create_student(client, admin_headers)
+    workout_plan_id = await create_workout_plan(
+        client,
+        instructor_headers,
+        student_id=student_id,
+        instructor_id=instructor_id,
+    )
+    exercise_id = await create_exercise(client, instructor_headers, workout_plan_id)
+    delete_response = await client.delete(
+        f"/api/exercises/{exercise_id}",
+        headers=instructor_headers,
+    )
+
+    response = await client.post(
+        "/api/exercise-progress",
+        json={
+            "student_id": student_id,
+            "exercise_id": exercise_id,
+            "load": "42.50",
+            "repetitions": 11,
+        },
+        headers=instructor_headers,
+    )
+
+    assert delete_response.status_code == 200
+    assert response.status_code == 409
+    assert response.json()["error"]["code"] == "EXERCISE_INACTIVE"
+
+
 async def test_list_exercise_progress_by_student_preserves_history(
     client: AsyncClient,
 ) -> None:

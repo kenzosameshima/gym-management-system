@@ -33,8 +33,26 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 def create_app() -> FastAPI:
     app = FastAPI(
         title=settings.APP_NAME,
+        version="0.8.0-beta",
+        summary="Gym management API",
+        description=(
+            "Layered async API for authentication, students, plans, enrollments, "
+            "payments, access control, workouts, and reporting. Protected endpoints "
+            "use JWT bearer authentication and role-based authorization."
+        ),
         debug=settings.DEBUG,
         lifespan=lifespan,
+        openapi_tags=[
+            {"name": "auth", "description": "JWT authentication and current user lookup."},
+            {"name": "students", "description": "Student registration and lifecycle."},
+            {"name": "plans", "description": "Gym membership plan management."},
+            {"name": "enrollments", "description": "Student enrollment management."},
+            {"name": "payments", "description": "Payment registration and status updates."},
+            {"name": "access control", "description": "Operational student access checks."},
+            {"name": "workouts", "description": "Workout plans, exercises, and progress."},
+            {"name": "reports", "description": "Read-only reporting and analytics."},
+            {"name": "health", "description": "Liveness and readiness probes."},
+        ],
     )
 
     register_middlewares(app, settings)

@@ -2,6 +2,18 @@ import axios from "axios";
 
 export function getErrorMessage(error: unknown): string {
   if (axios.isAxiosError(error)) {
+    if (error.code === "ECONNABORTED") {
+      return "Request timed out. Check the connection and try again.";
+    }
+    if (error.response === undefined) {
+      return "Network error. Check the API connection and try again.";
+    }
+    if (error.response.status === 401) {
+      return "Your session has expired. Sign in again.";
+    }
+    if (error.response.status === 403) {
+      return "You do not have permission to perform this action.";
+    }
     const detail = error.response?.data;
     if (typeof detail === "object" && detail !== null && "message" in detail) {
       return String(detail.message);
@@ -36,4 +48,3 @@ export function formatDateTime(value: string): string {
 }
 
 export const STATUS_OPTIONS = ["ACTIVE", "INACTIVE"] as const;
-

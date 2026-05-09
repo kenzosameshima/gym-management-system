@@ -1,4 +1,9 @@
+from datetime import UTC, datetime, timedelta
+
 from httpx import AsyncClient
+from jose import jwt
+
+from app.core.config import get_settings
 
 REGISTER_PAYLOAD = {
     "email": "admin@example.com",
@@ -87,3 +92,39 @@ async def test_block_me_without_token(client: AsyncClient) -> None:
     response = await client.get("/api/auth/me")
 
     assert response.status_code == 401
+
+
+async def test_block_me_with_expired_token(client: AsyncClient) -> None:
+    register_response = await client.post("/api/auth/register", json=REGISTER_PAYLOAD)
+    settings = get_settings()
+    token = jwt.encode(
+        {"sub": "1", "exp": datetime.now(UTC) - timedelta(minutes=1)},
+        settings.SECRET_KEY,
+        algorithm=settings.JWT_ALGORITHM,
+    )
+
+    response = await client.get("/api/auth/me", headers={"Authorization": f"Bearer {token}"})
+
+    assert register_response.status_code == 201
+    assert response.status_code == 401
+    assert response.json()["error"]["code"] == "UNAUTHORIZED"
+
+
+async def test_block_me_with_malformed_token(client: AsyncClient) -> None:
+    response = await client.get("/api/auth/me", headers={"Authorization": "Bearer malformed"})
+
+    assert response.status_code == 401
+    assert response.json()["error"]["code"] == "UNAUTHORIZED"
+
+
+async def test_block_me_with_invalid_signature(client: AsyncClient) -> None:
+    token = jwt.encode(
+        {"sub": "1", "exp": datetime.now(UTC) + timedelta(minutes=5)},
+        "wrong-secret-key-with-enough-length",
+        algorithm="HS256",
+    )
+
+    response = await client.get("/api/auth/me", headers={"Authorization": f"Bearer {token}"})
+
+    assert response.status_code == 401
+    assert response.json()["error"]["code"] == "UNAUTHORIZED"
