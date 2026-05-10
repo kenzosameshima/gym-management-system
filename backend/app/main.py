@@ -4,6 +4,7 @@ from contextlib import asynccontextmanager
 import structlog
 from fastapi import FastAPI
 
+from app.api.access_control import access_logs_router
 from app.api.access_control import router as access_control_router
 from app.api.auth import router as auth_router
 from app.api.enrollments import router as enrollments_router
@@ -63,6 +64,7 @@ def create_app() -> FastAPI:
     app.include_router(enrollments_router)
     app.include_router(payments_router)
     app.include_router(access_control_router)
+    app.include_router(access_logs_router)
     app.include_router(workouts_router)
     app.include_router(reports_router)
     app.include_router(health_router)

@@ -14,6 +14,171 @@ Repository Layer
 Database Layer
 ```
 
+## Diagrams
+
+### Use Case Diagram
+
+```mermaid
+flowchart LR
+    Admin[Admin]
+    Receptionist[Receptionist]
+    Instructor[Instructor]
+
+    Auth((Authenticate))
+    Students((Manage students))
+    Plans((Manage plans))
+    Enrollments((Manage enrollments))
+    Payments((Manage payments))
+    Access((Check access by CPF))
+    AccessLogs((Review access logs))
+    Workouts((Manage workouts))
+    Reports((View reports))
+    Dashboard((View dashboard))
+
+    Admin --> Auth
+    Admin --> Students
+    Admin --> Plans
+    Admin --> Enrollments
+    Admin --> Payments
+    Admin --> Access
+    Admin --> AccessLogs
+    Admin --> Workouts
+    Admin --> Reports
+    Admin --> Dashboard
+
+    Receptionist --> Auth
+    Receptionist --> Students
+    Receptionist --> Plans
+    Receptionist --> Enrollments
+    Receptionist --> Payments
+    Receptionist --> Access
+    Receptionist --> AccessLogs
+    Receptionist --> Reports
+    Receptionist --> Dashboard
+
+    Instructor --> Auth
+    Instructor --> Students
+    Instructor --> Workouts
+    Instructor --> Reports
+    Instructor --> Dashboard
+```
+
+### ER Diagram
+
+```mermaid
+erDiagram
+    USERS ||--o{ WORKOUT_PLANS : instructs
+    STUDENTS ||--o{ ENROLLMENTS : has
+    PLANS ||--o{ ENROLLMENTS : selected_in
+    ENROLLMENTS ||--o{ PAYMENTS : generates
+    STUDENTS ||--o{ ACCESS_LOGS : attempts
+    STUDENTS ||--o{ WORKOUT_PLANS : receives
+    WORKOUT_PLANS ||--o{ EXERCISES : contains
+    EXERCISES ||--o{ EXERCISE_PROGRESS : records
+    STUDENTS ||--o{ EXERCISE_PROGRESS : performs
+
+    USERS {
+        int id PK
+        string email UK
+        string full_name
+        string role
+        bool is_active
+    }
+
+    STUDENTS {
+        int id PK
+        string cpf UK
+        string email UK
+        string name
+        string status
+    }
+
+    PLANS {
+        int id PK
+        string name UK
+        decimal price
+        int duration_days
+        string status
+    }
+
+    ENROLLMENTS {
+        int id PK
+        int student_id FK
+        int plan_id FK
+        date start_date
+        date end_date
+        string status
+    }
+
+    PAYMENTS {
+        int id PK
+        int enrollment_id FK
+        decimal amount
+        date due_date
+        date payment_date
+        string status
+    }
+
+    ACCESS_LOGS {
+        int id PK
+        int student_id FK
+        string cpf_attempted
+        datetime accessed_at
+        bool allowed
+        string reason
+    }
+
+    WORKOUT_PLANS {
+        int id PK
+        int student_id FK
+        int instructor_id FK
+        string goal
+        string status
+    }
+
+    EXERCISES {
+        int id PK
+        int workout_plan_id FK
+        string name
+        string status
+    }
+
+    EXERCISE_PROGRESS {
+        int id PK
+        int exercise_id FK
+        int student_id FK
+        decimal load
+        int repetitions
+        datetime recorded_at
+        string notes
+    }
+```
+
+### Architecture Diagram
+
+```mermaid
+flowchart TB
+    Browser[React frontend]
+    Router[FastAPI routers]
+    Auth[Auth and role dependencies]
+    Services[Service layer]
+    Repositories[Repository layer]
+    DB[(PostgreSQL)]
+
+    Browser -->|JWT + JSON over HTTP| Router
+    Router --> Auth
+    Router --> Services
+    Services --> Repositories
+    Repositories --> DB
+
+    subgraph Backend
+        Router
+        Auth
+        Services
+        Repositories
+    end
+```
+
 Current responsibilities:
 
 - API layer receives HTTP input, applies authentication/authorization dependencies, and returns response models.
@@ -91,7 +256,7 @@ Phase 8 adds operational UX structure on top of the first integration:
 - Recharts renders revenue, daily access, plan usage, and workout activity visualizations.
 - `DataTable` centralizes loading, empty, sorting, pagination, sticky headers, and responsive overflow behavior.
 - `react-hot-toast` provides lightweight user feedback for auth, mutations, access checks, and API failures.
-- Access control keeps recent checks in frontend session state because access-log listing is intentionally not exposed by the backend.
+- Access control keeps recent checks in frontend session state for immediate operator feedback; persisted audit logs are exposed through `GET /api/access/logs`.
 - Backend filtering was extended minimally where the UI needed server-side support: student and plan status filters, student search for enrollments and payments, and student/instructor/status filters for workout plans.
 
 The dashboard remains role-aware:

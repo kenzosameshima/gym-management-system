@@ -14,8 +14,9 @@ from app.repositories.enrollment_repository import (
 )
 from app.repositories.payment_repository import PaymentRepository, get_payment_repository
 from app.repositories.student_repository import StudentRepository, get_student_repository
-from app.schemas.access import AccessDecision
+from app.schemas.access import AccessDecision, AccessLogRead
 from app.schemas.enrollment import EnrollmentUpdate
+from app.schemas.pagination import Page
 
 
 class AccessControlService:
@@ -98,6 +99,25 @@ class AccessControlService:
         if student is None:
             return await self._check_missing_student_by_id(session=session, student_id=student_id)
         return await self.can_access_by_cpf(cpf=student.cpf, session=session)
+
+    async def list_access_logs(
+        self,
+        session: AsyncSession,
+        *,
+        limit: int,
+        offset: int,
+    ) -> Page[AccessLogRead]:
+        items, total = await self._access_log_repository.list(
+            session,
+            limit=limit,
+            offset=offset,
+        )
+        return Page[AccessLogRead](
+            items=items,
+            total=total,
+            limit=limit,
+            offset=offset,
+        )
 
     async def _check_missing_student_by_id(
         self,

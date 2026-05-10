@@ -205,6 +205,7 @@ The backend exposes grouped REST APIs under `/api`:
 - `/api/enrollments`: enrollment creation, cancellation, and filtering.
 - `/api/payments`: payment registration, status changes, and filtering.
 - `/api/access-control`: operational CPF access checks.
+- `/api/access/logs`: paginated access-check audit logs.
 - `/api/workout-plans`, `/api/exercises`, `/api/exercise-progress`: workout domain.
 - `/api/reports`: read-only analytics.
 
@@ -288,6 +289,12 @@ Access control is calculated by `AccessControlService`. The API layer only recei
 - the active enrollment has no overdue payment.
 
 Every access check creates an `AccessLog`, including failed checks for nonexistent CPF values. Access logs store `cpf_attempted`, `student_id` when known, `accessed_at`, `allowed`, and the denial reason when access is blocked.
+
+Access-log listing:
+
+```bash
+GET /api/access/logs
+```
 
 ## Workout Domain
 
@@ -408,7 +415,7 @@ Known limitations for this release:
 
 ## Dashboard And Operational UX
 
-The dashboard is an operational overview backed by report endpoints only. It does not duplicate analytics rules in the frontend.
+The dashboard is an operational overview backed by the existing `/api/reports/*` endpoints only. It consumes the same read-only reports listed above, rather than a single dedicated dashboard endpoint, and it does not duplicate analytics rules in the frontend.
 
 Role behavior:
 

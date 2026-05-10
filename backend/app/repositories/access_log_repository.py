@@ -1,3 +1,4 @@
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.enums import AccessDeniedReason
@@ -24,6 +25,22 @@ class AccessLogRepository:
         await session.flush()
         await session.refresh(access_log)
         return access_log
+
+    async def list(
+        self,
+        session: AsyncSession,
+        *,
+        limit: int,
+        offset: int,
+    ) -> tuple[list[AccessLog], int]:
+        total = await session.scalar(select(func.count()).select_from(AccessLog))
+        result = await session.execute(
+            select(AccessLog)
+            .order_by(AccessLog.accessed_at.desc(), AccessLog.id.desc())
+            .limit(limit)
+            .offset(offset),
+        )
+        return list(result.scalars().all()), total or 0
 
 
 def get_access_log_repository() -> AccessLogRepository:

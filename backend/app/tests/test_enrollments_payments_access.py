@@ -240,6 +240,40 @@ async def test_access_denied_for_missing_student_generates_log(client: AsyncClie
     )
 
 
+async def test_list_access_logs_returns_paginated_logs_newest_first(
+    client: AsyncClient,
+) -> None:
+    headers = await auth_headers(client)
+    await client.post(
+        "/api/access-control/check",
+        json={"cpf": "00000000000"},
+        headers=headers,
+    )
+    await client.post(
+        "/api/access-control/check",
+        json={"cpf": "11111111111"},
+        headers=headers,
+    )
+
+    response = await client.get("/api/access/logs?limit=1&offset=0", headers=headers)
+
+    assert response.status_code == 200
+    assert response.json()["total"] == 2
+    assert response.json()["limit"] == 1
+    assert response.json()["offset"] == 0
+    assert len(response.json()["items"]) == 1
+    assert response.json()["items"][0]["cpf_attempted"] == "11111111111"
+    assert response.json()["items"][0]["reason"] == AccessDeniedReason.STUDENT_NOT_FOUND
+
+
+async def test_instructor_cannot_list_access_logs(client: AsyncClient) -> None:
+    headers = await auth_headers(client, role="INSTRUCTOR")
+
+    response = await client.get("/api/access/logs", headers=headers)
+
+    assert response.status_code == 403
+
+
 async def test_access_denied_for_inactive_student_generates_log(client: AsyncClient) -> None:
     headers = await auth_headers(client)
     student_response = await client.post(
