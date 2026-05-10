@@ -3,7 +3,7 @@ from decimal import Decimal
 
 from pydantic import BaseModel, Field
 
-from app.core.enums import StudentStatus
+from app.core.enums import FinancialStatus, StudentStatus
 
 
 class ReportDateRange(BaseModel):
@@ -17,6 +17,7 @@ class ActiveStudentReportItem(BaseModel):
     cpf: str
     email: str
     status: StudentStatus
+    financial_status: FinancialStatus
 
 
 class ActiveStudentsReport(BaseModel):

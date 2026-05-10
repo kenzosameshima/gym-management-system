@@ -1,4 +1,5 @@
 import type { PageQueryParams } from "./common";
+import type { PaymentStatus } from "./payment";
 
 export type EnrollmentStatus = "ACTIVE" | "EXPIRED" | "CANCELLED";
 
@@ -9,6 +10,7 @@ export interface Enrollment {
   start_date: string;
   end_date: string;
   status: EnrollmentStatus;
+  payment_status: PaymentStatus | null;
   created_at: string;
   updated_at: string;
 }

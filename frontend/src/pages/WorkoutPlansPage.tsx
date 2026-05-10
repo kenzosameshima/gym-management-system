@@ -12,12 +12,16 @@ import {
   updateExercise,
   updateWorkoutPlan
 } from "../api/workoutsApi";
+import { getStudents } from "../api/studentsApi";
+import { getUsers } from "../api/usersApi";
 import { DataTable, type Column } from "../components/DataTable";
 import { ErrorState } from "../components/ErrorState";
 import { LoadingState } from "../components/LoadingState";
 import { useAuth } from "../contexts/AuthContext";
 import { useSortableRows } from "../hooks/useSortableRows";
+import type { AuthUser } from "../types/auth";
 import type { Page } from "../types/common";
+import type { Student } from "../types/student";
 import type { Exercise, ExercisePayload, ExerciseProgress, WorkoutPlan, WorkoutPlanPayload } from "../types/workout";
 import { formatDateTime, getErrorMessage, STATUS_OPTIONS } from "./pageUtils";
 
@@ -32,6 +36,8 @@ export function WorkoutPlansPage(): JSX.Element {
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [progress, setProgress] = useState<ExerciseProgress[]>([]);
   const [planForm, setPlanForm] = useState<WorkoutPlanPayload>(EMPTY_PLAN);
+  const [students, setStudents] = useState<Student[]>([]);
+  const [instructors, setInstructors] = useState<AuthUser[]>([]);
   const [studentSearch, setStudentSearch] = useState("");
   const [instructorSearch, setInstructorSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<"" | WorkoutPlanPayload["status"]>("");
@@ -40,6 +46,7 @@ export function WorkoutPlansPage(): JSX.Element {
   const [editingExerciseId, setEditingExerciseId] = useState<number | null>(null);
   const [selectedExerciseId, setSelectedExerciseId] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingOptions, setIsLoadingOptions] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -60,9 +67,34 @@ export function WorkoutPlansPage(): JSX.Element {
     }
   }
 
+  async function loadFormOptions(): Promise<void> {
+    setIsLoadingOptions(true);
+    try {
+      const [studentPage, instructorPage] = await Promise.all([
+        getStudents({ limit: 100, status: "ACTIVE" }),
+        getUsers({ limit: 100, role: "INSTRUCTOR" })
+      ]);
+      setStudents(studentPage.items);
+      setInstructors(instructorPage.items);
+    } catch (loadError) {
+      setError(getErrorMessage(loadError));
+    } finally {
+      setIsLoadingOptions(false);
+    }
+  }
+
   useEffect(() => {
     void loadPlans();
+    void loadFormOptions();
   }, []);
+
+  function studentLabel(studentId: number): string {
+    return students.find((student) => student.id === studentId)?.name ?? `Student #${studentId}`;
+  }
+
+  function instructorLabel(instructorId: number): string {
+    return instructors.find((instructor) => instructor.id === instructorId)?.full_name ?? `Instructor #${instructorId}`;
+  }
 
   async function selectPlan(plan: WorkoutPlan): Promise<void> {
     setSelectedPlan(plan);
@@ -74,11 +106,15 @@ export function WorkoutPlansPage(): JSX.Element {
   async function handlePlanSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
     setIsSaving(true);
+    const payload = {
+      ...planForm,
+      instructor_id: user?.role === "INSTRUCTOR" ? user.id : planForm.instructor_id
+    };
     try {
       if (editingPlanId === null) {
-        await createWorkoutPlan(planForm);
+        await createWorkoutPlan(payload);
       } else {
-        await updateWorkoutPlan(editingPlanId, planForm);
+        await updateWorkoutPlan(editingPlanId, payload);
       }
       setPlanForm(EMPTY_PLAN);
       setEditingPlanId(null);
@@ -144,8 +180,8 @@ export function WorkoutPlansPage(): JSX.Element {
 
   const planColumns: Column<WorkoutPlan>[] = [
     { key: "id", header: "ID", render: (plan) => plan.id, sortValue: (plan) => plan.id },
-    { key: "student", header: "Student", render: (plan) => plan.student_id },
-    { key: "instructor", header: "Instructor", render: (plan) => plan.instructor_id },
+    { key: "student", header: "Student", render: (plan) => studentLabel(plan.student_id) },
+    { key: "instructor", header: "Instructor", render: (plan) => instructorLabel(plan.instructor_id) },
     { key: "goal", header: "Goal", render: (plan) => plan.goal, sortValue: (plan) => plan.goal },
     { key: "status", header: "Status", render: (plan) => plan.status, sortValue: (plan) => plan.status },
     {
@@ -166,6 +202,7 @@ export function WorkoutPlansPage(): JSX.Element {
     { key: "group", header: "Group", render: (exercise) => exercise.muscle_group },
     { key: "sets", header: "Sets", render: (exercise) => exercise.sets },
     { key: "reps", header: "Reps", render: (exercise) => exercise.repetitions },
+    { key: "load", header: "Load", render: (exercise) => exercise.load ?? "-" },
     { key: "status", header: "Status", render: (exercise) => exercise.status },
     {
       key: "actions",
@@ -196,27 +233,39 @@ export function WorkoutPlansPage(): JSX.Element {
       </form>
       {canWrite && (
         <form className="panel form-grid" onSubmit={handlePlanSubmit}>
-          <input type="number" min="1" placeholder="Student ID" value={planForm.student_id || ""} onChange={(event) => setPlanForm({ ...planForm, student_id: Number(event.target.value) })} required />
-          <input type="number" min="1" placeholder="Instructor ID" value={planForm.instructor_id || ""} onChange={(event) => setPlanForm({ ...planForm, instructor_id: Number(event.target.value) })} required />
-          <input placeholder="Goal" value={planForm.goal} onChange={(event) => setPlanForm({ ...planForm, goal: event.target.value })} required />
-          <input placeholder="Notes" value={planForm.notes ?? ""} onChange={(event) => setPlanForm({ ...planForm, notes: event.target.value })} />
-          <select value={planForm.status} onChange={(event) => setPlanForm({ ...planForm, status: event.target.value as WorkoutPlanPayload["status"] })}>{STATUS_OPTIONS.map((status) => <option key={status}>{status}</option>)}</select>
+          <label>Student
+            <select value={planForm.student_id || ""} onChange={(event) => setPlanForm({ ...planForm, student_id: Number(event.target.value) })} required disabled={isLoadingOptions || students.length === 0}>
+              <option value="">{isLoadingOptions ? "Loading students..." : "Select student"}</option>
+              {students.map((student) => <option key={student.id} value={student.id}>{student.name} - {student.email}</option>)}
+            </select>
+          </label>
+          <label>Instructor
+            <select value={user?.role === "INSTRUCTOR" ? user.id : planForm.instructor_id || ""} onChange={(event) => setPlanForm({ ...planForm, instructor_id: Number(event.target.value) })} required disabled={user?.role === "INSTRUCTOR" || isLoadingOptions || instructors.length === 0}>
+              <option value="">{isLoadingOptions ? "Loading instructors..." : "Select instructor"}</option>
+              {(user?.role === "INSTRUCTOR" && !instructors.some((instructor) => instructor.id === user.id) ? [user, ...instructors] : instructors).map((instructor) => (
+                <option key={instructor.id} value={instructor.id}>{instructor.full_name} - {instructor.email}</option>
+              ))}
+            </select>
+          </label>
+          <label>Goal<input placeholder="Goal" value={planForm.goal} onChange={(event) => setPlanForm({ ...planForm, goal: event.target.value })} required /></label>
+          <label>Notes<input placeholder="Notes" value={planForm.notes ?? ""} onChange={(event) => setPlanForm({ ...planForm, notes: event.target.value })} /></label>
+          <label>Status<select value={planForm.status} onChange={(event) => setPlanForm({ ...planForm, status: event.target.value as WorkoutPlanPayload["status"] })}>{STATUS_OPTIONS.map((status) => <option key={status}>{status}</option>)}</select></label>
           <button type="submit" disabled={isSaving}>{isSaving ? "Saving..." : editingPlanId === null ? "Create plan" : "Update plan"}</button>
         </form>
       )}
       {page === null ? <LoadingState /> : <DataTable columns={planColumns} rows={sortedPlans.rows} getRowKey={(plan) => plan.id} emptyMessage="No workout plans found." isLoading={isLoading} total={page.total} limit={page.limit} offset={page.offset} onPageChange={(nextOffset) => void loadPlans(nextOffset)} sortKey={sortedPlans.sortKey} sortDirection={sortedPlans.sortDirection} onSortChange={sortedPlans.setSortKey} />}
       {selectedPlan !== null && (
         <section className="page-stack">
-          <h2>Exercises for plan {selectedPlan.id}</h2>
+          <h2>Workout sheet for {studentLabel(selectedPlan.student_id)}</h2>
           {canWrite && (
             <form className="panel form-grid" onSubmit={handleExerciseSubmit}>
-              <input placeholder="Name" value={exerciseForm.name} onChange={(event) => setExerciseForm({ ...exerciseForm, name: event.target.value })} required />
-              <input placeholder="Muscle group" value={exerciseForm.muscle_group} onChange={(event) => setExerciseForm({ ...exerciseForm, muscle_group: event.target.value })} required />
-              <input type="number" min="1" value={exerciseForm.sets} onChange={(event) => setExerciseForm({ ...exerciseForm, sets: Number(event.target.value) })} required />
-              <input type="number" min="1" value={exerciseForm.repetitions} onChange={(event) => setExerciseForm({ ...exerciseForm, repetitions: Number(event.target.value) })} required />
-              <input placeholder="Load" value={exerciseForm.load ?? ""} onChange={(event) => setExerciseForm({ ...exerciseForm, load: event.target.value })} />
-              <input placeholder="Notes" value={exerciseForm.notes ?? ""} onChange={(event) => setExerciseForm({ ...exerciseForm, notes: event.target.value })} />
-              <select value={exerciseForm.status} onChange={(event) => setExerciseForm({ ...exerciseForm, status: event.target.value as ExercisePayload["status"] })}>{STATUS_OPTIONS.map((status) => <option key={status}>{status}</option>)}</select>
+              <label>Exercise name<input placeholder="Exercise name" value={exerciseForm.name} onChange={(event) => setExerciseForm({ ...exerciseForm, name: event.target.value })} required /></label>
+              <label>Muscle group<input placeholder="Muscle group" value={exerciseForm.muscle_group} onChange={(event) => setExerciseForm({ ...exerciseForm, muscle_group: event.target.value })} required /></label>
+              <label>Sets<input type="number" min="1" value={exerciseForm.sets} onChange={(event) => setExerciseForm({ ...exerciseForm, sets: Number(event.target.value) })} required /></label>
+              <label>Repetitions<input type="number" min="1" value={exerciseForm.repetitions} onChange={(event) => setExerciseForm({ ...exerciseForm, repetitions: Number(event.target.value) })} required /></label>
+              <label>Load<input placeholder="Load" value={exerciseForm.load ?? ""} onChange={(event) => setExerciseForm({ ...exerciseForm, load: event.target.value })} /></label>
+              <label>Notes<input placeholder="Notes" value={exerciseForm.notes ?? ""} onChange={(event) => setExerciseForm({ ...exerciseForm, notes: event.target.value })} /></label>
+              <label>Status<select value={exerciseForm.status} onChange={(event) => setExerciseForm({ ...exerciseForm, status: event.target.value as ExercisePayload["status"] })}>{STATUS_OPTIONS.map((status) => <option key={status}>{status}</option>)}</select></label>
               <button type="submit" disabled={isSaving}>{editingExerciseId === null ? "Add exercise" : "Update exercise"}</button>
             </form>
           )}
@@ -233,9 +282,9 @@ export function WorkoutPlansPage(): JSX.Element {
           </div>
           {canWrite && selectedExerciseId !== null && (
             <form className="panel form-grid" onSubmit={handleProgressSubmit}>
-              <input name="load" placeholder="Load" />
-              <input name="repetitions" type="number" min="1" placeholder="Repetitions" required />
-              <input name="notes" placeholder="Notes" />
+              <label>Load<input name="load" placeholder="Load" /></label>
+              <label>Repetitions<input name="repetitions" type="number" min="1" placeholder="Repetitions" required /></label>
+              <label>Notes<input name="notes" placeholder="Notes" /></label>
               <button type="submit" disabled={isSaving}>Register progress</button>
             </form>
           )}

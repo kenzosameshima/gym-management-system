@@ -39,6 +39,13 @@ class PaymentStatus(str, Enum):  # noqa: UP042
     OVERDUE = "OVERDUE"
 
 
+class FinancialStatus(str, Enum):  # noqa: UP042
+    IN_GOOD_STANDING = "IN_GOOD_STANDING"
+    DEFAULTER = "DEFAULTER"
+    NO_ACTIVE_ENROLLMENT = "NO_ACTIVE_ENROLLMENT"
+    INACTIVE = "INACTIVE"
+
+
 class AccessDeniedReason(str, Enum):  # noqa: UP042
     STUDENT_NOT_FOUND = "STUDENT_NOT_FOUND"
     STUDENT_INACTIVE = "STUDENT_INACTIVE"

@@ -3,7 +3,7 @@ from datetime import date, datetime, timedelta
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
-from app.core.enums import StudentStatus
+from app.core.enums import FinancialStatus, StudentStatus
 
 CPF_PATTERN = re.compile(r"^\d{3}\.\d{3}\.\d{3}-\d{2}$|^\d{11}$")
 
@@ -12,9 +12,9 @@ class StudentBase(BaseModel):
     name: str = Field(min_length=1, max_length=255)
     cpf: str = Field(min_length=11, max_length=14)
     birth_date: date
-    phone: str | None = Field(default=None, max_length=32)
+    phone: str = Field(min_length=1, max_length=32)
     email: EmailStr
-    address: str | None = None
+    address: str = Field(min_length=1)
     status: StudentStatus = StudentStatus.ACTIVE
 
     @field_validator("cpf")
@@ -42,9 +42,9 @@ class StudentUpdate(BaseModel):
     name: str | None = Field(default=None, min_length=1, max_length=255)
     cpf: str | None = Field(default=None, min_length=11, max_length=14)
     birth_date: date | None = None
-    phone: str | None = Field(default=None, max_length=32)
+    phone: str | None = Field(default=None, min_length=1, max_length=32)
     email: EmailStr | None = None
-    address: str | None = None
+    address: str | None = Field(default=None, min_length=1)
     status: StudentStatus | None = None
 
     @field_validator("cpf")
@@ -71,9 +71,10 @@ class StudentRead(BaseModel):
     name: str
     cpf: str
     birth_date: date
-    phone: str | None
+    phone: str
     email: EmailStr
-    address: str | None
+    address: str
     status: StudentStatus
+    financial_status: FinancialStatus
     created_at: datetime
     updated_at: datetime

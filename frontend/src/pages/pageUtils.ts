@@ -47,4 +47,14 @@ export function formatDateTime(value: string): string {
   }).format(new Date(value));
 }
 
+export function formatFinancialStatus(value: string): string {
+  const labels: Record<string, string> = {
+    IN_GOOD_STANDING: "In good standing",
+    DEFAULTER: "Defaulter",
+    NO_ACTIVE_ENROLLMENT: "No active enrollment",
+    INACTIVE: "Inactive"
+  };
+  return labels[value] ?? value;
+}
+
 export const STATUS_OPTIONS = ["ACTIVE", "INACTIVE"] as const;

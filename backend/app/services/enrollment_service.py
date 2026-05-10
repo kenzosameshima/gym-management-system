@@ -1,6 +1,7 @@
 from datetime import timedelta
 
 from fastapi import Depends, status
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.enums import EnrollmentStatus, PaymentStatus, PlanStatus, StudentStatus
@@ -52,13 +53,21 @@ class EnrollmentService:
             student_search=student_search,
         )
         return Page[EnrollmentRead](
-            items=list(enrollments),
+            items=await self._to_enrollment_reads(session, list(enrollments)),
             total=total,
             limit=limit,
             offset=offset,
         )
 
-    async def get_enrollment(self, session: AsyncSession, enrollment_id: int) -> Enrollment:
+    async def get_enrollment(self, session: AsyncSession, enrollment_id: int) -> EnrollmentRead:
+        enrollment = await self._get_enrollment_model(session, enrollment_id)
+        return (await self._to_enrollment_reads(session, [enrollment]))[0]
+
+    async def _get_enrollment_model(
+        self,
+        session: AsyncSession,
+        enrollment_id: int,
+    ) -> Enrollment:
         enrollment = await self._repository.get_by_id(session, enrollment_id)
         if enrollment is None:
             raise self._not_found_error()
@@ -68,7 +77,7 @@ class EnrollmentService:
         self,
         session: AsyncSession,
         payload: EnrollmentCreate,
-    ) -> Enrollment:
+    ) -> EnrollmentRead:
         student = await self._student_repository.get_by_id(session, payload.student_id)
         if student is None:
             raise ApplicationError("STUDENT_NOT_FOUND", "Student was not found.", 404)
@@ -119,7 +128,7 @@ class EnrollmentService:
             await self._payment_repository.create(session, first_payment)
             await session.commit()
             await session.refresh(created_enrollment)
-            return created_enrollment
+            return (await self._to_enrollment_reads(session, [created_enrollment]))[0]
         except Exception:
             await session.rollback()
             raise
@@ -129,19 +138,70 @@ class EnrollmentService:
         session: AsyncSession,
         enrollment_id: int,
         payload: EnrollmentUpdate,
-    ) -> Enrollment:
-        enrollment = await self.get_enrollment(session, enrollment_id)
+    ) -> EnrollmentRead:
+        enrollment = await self._get_enrollment_model(session, enrollment_id)
         updated_enrollment = await self._repository.update(session, enrollment, payload)
         await session.commit()
         await session.refresh(updated_enrollment)
-        return updated_enrollment
+        return (await self._to_enrollment_reads(session, [updated_enrollment]))[0]
 
-    async def cancel_enrollment(self, session: AsyncSession, enrollment_id: int) -> Enrollment:
+    async def cancel_enrollment(self, session: AsyncSession, enrollment_id: int) -> EnrollmentRead:
         return await self.update_enrollment(
             session,
             enrollment_id,
             EnrollmentUpdate(status=EnrollmentStatus.CANCELLED),
         )
+
+    async def _to_enrollment_reads(
+        self,
+        session: AsyncSession,
+        enrollments: list[Enrollment],
+    ) -> list[EnrollmentRead]:
+        payment_statuses = await self._payment_statuses_by_enrollment_id(session, enrollments)
+        return [
+            EnrollmentRead.model_validate(
+                {
+                    "id": enrollment.id,
+                    "student_id": enrollment.student_id,
+                    "plan_id": enrollment.plan_id,
+                    "start_date": enrollment.start_date,
+                    "end_date": enrollment.end_date,
+                    "status": enrollment.status,
+                    "payment_status": payment_statuses.get(enrollment.id),
+                    "created_at": enrollment.created_at,
+                    "updated_at": enrollment.updated_at,
+                }
+            )
+            for enrollment in enrollments
+        ]
+
+    async def _payment_statuses_by_enrollment_id(
+        self,
+        session: AsyncSession,
+        enrollments: list[Enrollment],
+    ) -> dict[int, PaymentStatus]:
+        enrollment_ids = [enrollment.id for enrollment in enrollments]
+        if not enrollment_ids:
+            return {}
+
+        result = await session.execute(
+            select(Payment.enrollment_id, Payment.status).where(
+                Payment.enrollment_id.in_(enrollment_ids),
+            )
+        )
+        statuses_by_enrollment_id: dict[int, list[PaymentStatus]] = {}
+        for row in result.all():
+            statuses_by_enrollment_id.setdefault(row.enrollment_id, []).append(row.status)
+
+        payment_statuses: dict[int, PaymentStatus] = {}
+        for enrollment_id, statuses in statuses_by_enrollment_id.items():
+            if PaymentStatus.OVERDUE in statuses:
+                payment_statuses[enrollment_id] = PaymentStatus.OVERDUE
+            elif PaymentStatus.PENDING in statuses:
+                payment_statuses[enrollment_id] = PaymentStatus.PENDING
+            else:
+                payment_statuses[enrollment_id] = PaymentStatus.PAID
+        return payment_statuses
 
     @staticmethod
     def _not_found_error() -> ApplicationError:

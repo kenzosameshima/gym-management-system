@@ -1,4 +1,5 @@
 import type { Status } from "./common";
+import type { FinancialStatus } from "./student";
 
 export interface DateRangeParams {
   start_date?: string;
@@ -11,6 +12,7 @@ export interface ActiveStudentReportItem {
   cpf: string;
   email: string;
   status: Status;
+  financial_status: FinancialStatus;
 }
 
 export interface ActiveStudentsReport {
@@ -66,4 +68,3 @@ export interface WorkoutSummaryReport {
   total_exercises: number;
   exercise_progress_records: number;
 }
-

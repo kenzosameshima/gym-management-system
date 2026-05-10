@@ -217,6 +217,12 @@ p {
   gap: 0.5rem;
 }
 
+.field-title-row {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+}
+
 .toolbar {
   align-items: center;
 }

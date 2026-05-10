@@ -1,4 +1,6 @@
-from sqlalchemy import select
+from collections.abc import Sequence
+
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.enums import UserRole
@@ -13,6 +15,27 @@ class UserRepository:
         statement = select(User).where(User.email == email)
         result = await session.execute(statement)
         return result.scalar_one_or_none()
+
+    async def list(
+        self,
+        session: AsyncSession,
+        *,
+        limit: int,
+        offset: int,
+        role: UserRole | None = None,
+        active_only: bool = True,
+    ) -> tuple[Sequence[User], int]:
+        statement = select(User)
+        if role is not None:
+            statement = statement.where(User.role == role)
+        if active_only:
+            statement = statement.where(User.is_active.is_(True))
+
+        total_result = await session.execute(select(func.count()).select_from(statement.subquery()))
+        result = await session.execute(
+            statement.order_by(User.full_name).limit(limit).offset(offset),
+        )
+        return result.scalars().all(), total_result.scalar_one()
 
     async def create(
         self,

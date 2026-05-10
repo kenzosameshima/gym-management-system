@@ -13,6 +13,7 @@ from app.api.payments import router as payments_router
 from app.api.plans import router as plans_router
 from app.api.reports import router as reports_router
 from app.api.students import router as students_router
+from app.api.users import router as users_router
 from app.api.workouts import router as workouts_router
 from app.core.config import get_settings
 from app.core.exceptions import register_exception_handlers
@@ -46,6 +47,7 @@ def create_app() -> FastAPI:
         openapi_tags=[
             {"name": "auth", "description": "JWT authentication and current user lookup."},
             {"name": "students", "description": "Student registration and lifecycle."},
+            {"name": "users", "description": "System users and role-based staff lookup."},
             {"name": "plans", "description": "Gym membership plan management."},
             {"name": "enrollments", "description": "Student enrollment management."},
             {"name": "payments", "description": "Payment registration and status updates."},
@@ -59,6 +61,7 @@ def create_app() -> FastAPI:
     register_middlewares(app, settings)
     register_exception_handlers(app)
     app.include_router(auth_router)
+    app.include_router(users_router)
     app.include_router(students_router)
     app.include_router(plans_router)
     app.include_router(enrollments_router)

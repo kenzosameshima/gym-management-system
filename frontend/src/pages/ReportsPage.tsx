@@ -24,7 +24,7 @@ import type {
   RevenueSummaryReport,
   WorkoutSummaryReport
 } from "../types/reports";
-import { formatCurrency, getErrorMessage } from "./pageUtils";
+import { formatCurrency, formatFinancialStatus, getErrorMessage } from "./pageUtils";
 
 interface ReportData {
   active?: ActiveStudentsReport;
@@ -89,7 +89,8 @@ export function ReportsPage(): JSX.Element {
   const activeColumns: Column<ActiveStudentReportItem>[] = [
     { key: "name", header: "Name", render: (item) => item.name },
     { key: "cpf", header: "CPF", render: (item) => item.cpf },
-    { key: "email", header: "Email", render: (item) => item.email }
+    { key: "email", header: "Email", render: (item) => item.email },
+    { key: "financial", header: "Financial status", render: (item) => formatFinancialStatus(item.financial_status) }
   ];
   const defaulterColumns: Column<DefaulterStudentReportItem>[] = [
     { key: "name", header: "Name", render: (item) => item.name },
@@ -133,4 +134,3 @@ export function ReportsPage(): JSX.Element {
     </section>
   );
 }
-

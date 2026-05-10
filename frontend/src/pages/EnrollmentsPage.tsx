@@ -1,12 +1,16 @@
 import { FormEvent, useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { cancelEnrollment, createEnrollment, getEnrollments } from "../api/enrollmentsApi";
+import { getPlans } from "../api/plansApi";
+import { getStudents } from "../api/studentsApi";
 import { DataTable, type Column } from "../components/DataTable";
 import { ErrorState } from "../components/ErrorState";
 import { LoadingState } from "../components/LoadingState";
 import { useSortableRows } from "../hooks/useSortableRows";
 import type { Page } from "../types/common";
 import type { Enrollment, EnrollmentCreatePayload } from "../types/enrollment";
+import type { Plan } from "../types/plan";
+import type { Student } from "../types/student";
 import { formatDate, getErrorMessage } from "./pageUtils";
 
 const EMPTY_FORM: EnrollmentCreatePayload = {
@@ -20,9 +24,13 @@ const ENROLLMENT_STATUSES = ["ACTIVE", "EXPIRED", "CANCELLED"] as const;
 export function EnrollmentsPage(): JSX.Element {
   const [page, setPage] = useState<Page<Enrollment> | null>(null);
   const [form, setForm] = useState<EnrollmentCreatePayload>(EMPTY_FORM);
+  const [students, setStudents] = useState<Student[]>([]);
+  const [plans, setPlans] = useState<Plan[]>([]);
+  const [showStudentEmail, setShowStudentEmail] = useState(false);
   const [studentSearch, setStudentSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingOptions, setIsLoadingOptions] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -37,8 +45,25 @@ export function EnrollmentsPage(): JSX.Element {
     }
   }
 
+  async function loadFormOptions(): Promise<void> {
+    setIsLoadingOptions(true);
+    try {
+      const [studentPage, planPage] = await Promise.all([
+        getStudents({ limit: 100, status: "ACTIVE" }),
+        getPlans({ limit: 100, status: "ACTIVE" })
+      ]);
+      setStudents(studentPage.items);
+      setPlans(planPage.items);
+    } catch (loadError) {
+      setError(getErrorMessage(loadError));
+    } finally {
+      setIsLoadingOptions(false);
+    }
+  }
+
   useEffect(() => {
     void loadEnrollments();
+    void loadFormOptions();
   }, []);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
@@ -62,11 +87,12 @@ export function EnrollmentsPage(): JSX.Element {
 
   const columns: Column<Enrollment>[] = [
     { key: "id", header: "ID", render: (enrollment) => enrollment.id, sortValue: (enrollment) => enrollment.id },
-    { key: "student", header: "Student", render: (enrollment) => enrollment.student_id },
-    { key: "plan", header: "Plan", render: (enrollment) => enrollment.plan_id },
+    { key: "student", header: "Student", render: (enrollment) => students.find((student) => student.id === enrollment.student_id)?.name ?? `Student #${enrollment.student_id}` },
+    { key: "plan", header: "Plan", render: (enrollment) => plans.find((plan) => plan.id === enrollment.plan_id)?.name ?? `Plan #${enrollment.plan_id}` },
     { key: "start", header: "Start", render: (enrollment) => formatDate(enrollment.start_date) },
     { key: "end", header: "End", render: (enrollment) => formatDate(enrollment.end_date) },
     { key: "status", header: "Status", render: (enrollment) => enrollment.status, sortValue: (enrollment) => enrollment.status },
+    { key: "payment", header: "Payment status", render: (enrollment) => enrollment.payment_status ?? "-" },
     {
       key: "actions",
       header: "Actions",
@@ -92,10 +118,31 @@ export function EnrollmentsPage(): JSX.Element {
         <button type="submit">Filter</button>
       </form>
       <form className="panel form-grid" onSubmit={handleSubmit}>
-        <input type="number" min="1" placeholder="Student ID" value={form.student_id || ""} onChange={(event) => setForm({ ...form, student_id: Number(event.target.value) })} required />
-        <input type="number" min="1" placeholder="Plan ID" value={form.plan_id || ""} onChange={(event) => setForm({ ...form, plan_id: Number(event.target.value) })} required />
-        <input type="date" value={form.start_date} onChange={(event) => setForm({ ...form, start_date: event.target.value })} required />
-        <input type="date" value={form.first_payment_due_date ?? ""} onChange={(event) => setForm({ ...form, first_payment_due_date: event.target.value })} />
+        <label>
+          <span className="field-title-row">
+            Student
+            <span className="inline-check">
+              <input type="checkbox" checked={showStudentEmail} onChange={(event) => setShowStudentEmail(event.target.checked)} />
+              Email
+            </span>
+          </span>
+          <select value={form.student_id || ""} onChange={(event) => setForm({ ...form, student_id: Number(event.target.value) })} required disabled={isLoadingOptions || students.length === 0}>
+            <option value="">{isLoadingOptions ? "Loading students..." : showStudentEmail ? "Select student by email" : "Select student by name"}</option>
+            {students.map((student) => (
+              <option key={student.id} value={student.id}>{showStudentEmail ? student.email : student.name}</option>
+            ))}
+          </select>
+        </label>
+        <label>Plan
+          <select value={form.plan_id || ""} onChange={(event) => setForm({ ...form, plan_id: Number(event.target.value) })} required disabled={isLoadingOptions || plans.length === 0}>
+            <option value="">{isLoadingOptions ? "Loading plans..." : "Select plan modality"}</option>
+            {plans.map((plan) => (
+              <option key={plan.id} value={plan.id}>{plan.name}</option>
+            ))}
+          </select>
+        </label>
+        <label>Start date<input type="date" value={form.start_date} onChange={(event) => setForm({ ...form, start_date: event.target.value })} required /></label>
+        <label>First payment due<input type="date" value={form.first_payment_due_date ?? ""} onChange={(event) => setForm({ ...form, first_payment_due_date: event.target.value })} /></label>
         <button type="submit" disabled={isSaving}>{isSaving ? "Saving..." : "Create enrollment"}</button>
       </form>
       {page === null ? <LoadingState /> : <DataTable columns={columns} rows={sorted.rows} getRowKey={(enrollment) => enrollment.id} emptyMessage="No enrollments found." isLoading={isLoading} total={page.total} limit={page.limit} offset={page.offset} onPageChange={(nextOffset) => void loadEnrollments(nextOffset)} sortKey={sorted.sortKey} sortDirection={sorted.sortDirection} onSortChange={sorted.setSortKey} />}

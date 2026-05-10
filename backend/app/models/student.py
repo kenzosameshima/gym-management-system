@@ -14,9 +14,9 @@ class Student(Base):
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     cpf: Mapped[str] = mapped_column(String(14), unique=True, index=True, nullable=False)
     birth_date: Mapped[date] = mapped_column(Date, nullable=False)
-    phone: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    phone: Mapped[str] = mapped_column(String(32), nullable=False)
     email: Mapped[str] = mapped_column(String(320), unique=True, index=True, nullable=False)
-    address: Mapped[str | None] = mapped_column(Text, nullable=True)
+    address: Mapped[str] = mapped_column(Text, nullable=False)
     status: Mapped[StudentStatus] = mapped_column(
         Enum(StudentStatus, native_enum=False, length=20),
         nullable=False,

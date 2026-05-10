@@ -8,7 +8,7 @@ import { useAuth } from "../contexts/AuthContext";
 import { useSortableRows } from "../hooks/useSortableRows";
 import type { Page } from "../types/common";
 import type { Student, StudentPayload } from "../types/student";
-import { formatDate, getErrorMessage, STATUS_OPTIONS } from "./pageUtils";
+import { formatDate, formatFinancialStatus, getErrorMessage, STATUS_OPTIONS } from "./pageUtils";
 
 const EMPTY_FORM: StudentPayload = {
   name: "",
@@ -85,9 +85,9 @@ export function StudentsPage(): JSX.Element {
       name: student.name,
       cpf: student.cpf,
       birth_date: student.birth_date,
-      phone: student.phone ?? "",
+      phone: student.phone,
       email: student.email,
-      address: student.address ?? "",
+      address: student.address,
       status: student.status
     });
   }
@@ -107,6 +107,7 @@ export function StudentsPage(): JSX.Element {
     { key: "email", header: "Email", render: (student) => student.email, sortValue: (student) => student.email },
     { key: "birth_date", header: "Birth date", render: (student) => formatDate(student.birth_date) },
     { key: "status", header: "Status", render: (student) => student.status },
+    { key: "financial", header: "Financial status", render: (student) => formatFinancialStatus(student.financial_status) },
     {
       key: "actions",
       header: "Actions",
@@ -145,15 +146,17 @@ export function StudentsPage(): JSX.Element {
       </form>
       {canWrite && (
         <form className="panel form-grid" onSubmit={handleSubmit}>
-          <input placeholder="Name" value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} required />
-          <input placeholder="CPF" value={form.cpf} onChange={(event) => setForm({ ...form, cpf: event.target.value })} required />
-          <input type="date" value={form.birth_date} onChange={(event) => setForm({ ...form, birth_date: event.target.value })} required />
-          <input placeholder="Phone" value={form.phone ?? ""} onChange={(event) => setForm({ ...form, phone: event.target.value })} />
-          <input type="email" placeholder="Email" value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })} required />
-          <input placeholder="Address" value={form.address ?? ""} onChange={(event) => setForm({ ...form, address: event.target.value })} />
-          <select value={form.status} onChange={(event) => setForm({ ...form, status: event.target.value as StudentPayload["status"] })}>
-            {STATUS_OPTIONS.map((status) => <option key={status}>{status}</option>)}
-          </select>
+          <label>Name<input placeholder="Name" value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} required /></label>
+          <label>CPF<input placeholder="CPF" value={form.cpf} onChange={(event) => setForm({ ...form, cpf: event.target.value })} required /></label>
+          <label>Birth date<input type="date" value={form.birth_date} onChange={(event) => setForm({ ...form, birth_date: event.target.value })} required /></label>
+          <label>Phone<input placeholder="Phone" value={form.phone} onChange={(event) => setForm({ ...form, phone: event.target.value })} required /></label>
+          <label>Email<input type="email" placeholder="Email" value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })} required /></label>
+          <label>Address<input placeholder="Address" value={form.address} onChange={(event) => setForm({ ...form, address: event.target.value })} required /></label>
+          <label>Status
+            <select value={form.status} onChange={(event) => setForm({ ...form, status: event.target.value as StudentPayload["status"] })}>
+              {STATUS_OPTIONS.map((status) => <option key={status}>{status}</option>)}
+            </select>
+          </label>
           <button type="submit" disabled={isSaving}>{isSaving ? "Saving..." : editingId === null ? "Create student" : "Update student"}</button>
         </form>
       )}

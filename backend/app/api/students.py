@@ -3,7 +3,6 @@ from fastapi import APIRouter, Depends, Query, status
 from app.auth.permissions import require_roles
 from app.core.enums import StudentStatus, UserRole
 from app.database.session import AsyncSessionDependency
-from app.models.student import Student
 from app.schemas.pagination import Page
 from app.schemas.student import StudentCreate, StudentRead, StudentUpdate
 from app.services.student_service import StudentService, get_student_service
@@ -23,7 +22,7 @@ async def create_student(
     payload: StudentCreate,
     session: AsyncSessionDependency,
     service: StudentService = Depends(get_student_service),
-) -> Student:
+) -> StudentRead:
     return await service.create_student(session=session, payload=payload)
 
 
@@ -76,7 +75,7 @@ async def get_student(
     student_id: int,
     session: AsyncSessionDependency,
     service: StudentService = Depends(get_student_service),
-) -> Student:
+) -> StudentRead:
     return await service.get_student(session=session, student_id=student_id)
 
 
@@ -93,7 +92,7 @@ async def update_student(
     payload: StudentUpdate,
     session: AsyncSessionDependency,
     service: StudentService = Depends(get_student_service),
-) -> Student:
+) -> StudentRead:
     return await service.update_student(session=session, student_id=student_id, payload=payload)
 
 
@@ -109,5 +108,5 @@ async def delete_student(
     student_id: int,
     session: AsyncSessionDependency,
     service: StudentService = Depends(get_student_service),
-) -> Student:
+) -> StudentRead:
     return await service.delete_student(session=session, student_id=student_id)

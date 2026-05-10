@@ -1,10 +1,16 @@
 from datetime import date
 from decimal import Decimal
 
-from sqlalchemy import Date, Select, case, cast, func, select
+from sqlalchemy import Date, Select, and_, case, cast, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.enums import PaymentStatus, StudentStatus, WorkoutPlanStatus
+from app.core.enums import (
+    EnrollmentStatus,
+    FinancialStatus,
+    PaymentStatus,
+    StudentStatus,
+    WorkoutPlanStatus,
+)
 from app.models.access_log import AccessLog
 from app.models.enrollment import Enrollment
 from app.models.exercise import Exercise
@@ -25,9 +31,27 @@ from app.schemas.reports import (
 
 class ReportRepository:
     async def active_students(self, session: AsyncSession) -> list[ActiveStudentReportItem]:
+        overdue_count = func.sum(case((Payment.status == PaymentStatus.OVERDUE, 1), else_=0))
         result = await session.execute(
-            select(Student.id, Student.name, Student.cpf, Student.email, Student.status)
+            select(
+                Student.id,
+                Student.name,
+                Student.cpf,
+                Student.email,
+                Student.status,
+                func.count(Enrollment.id).label("active_enrollments"),
+                func.coalesce(overdue_count, 0).label("overdue_payments"),
+            )
+            .outerjoin(
+                Enrollment,
+                and_(
+                    Enrollment.student_id == Student.id,
+                    Enrollment.status == EnrollmentStatus.ACTIVE,
+                ),
+            )
+            .outerjoin(Payment, Payment.enrollment_id == Enrollment.id)
             .where(Student.status == StudentStatus.ACTIVE)
+            .group_by(Student.id, Student.name, Student.cpf, Student.email, Student.status)
             .order_by(Student.id)
         )
         return [
@@ -37,9 +61,25 @@ class ReportRepository:
                 cpf=row.cpf,
                 email=row.email,
                 status=row.status,
+                financial_status=self._financial_status(
+                    active_enrollments=row.active_enrollments,
+                    overdue_payments=row.overdue_payments,
+                ),
             )
             for row in result.all()
         ]
+
+    @staticmethod
+    def _financial_status(
+        *,
+        active_enrollments: int,
+        overdue_payments: int,
+    ) -> FinancialStatus:
+        if active_enrollments == 0:
+            return FinancialStatus.NO_ACTIVE_ENROLLMENT
+        if overdue_payments > 0:
+            return FinancialStatus.DEFAULTER
+        return FinancialStatus.IN_GOOD_STANDING
 
     async def defaulter_students(self, session: AsyncSession) -> list[DefaulterStudentReportItem]:
         overdue_amount = func.coalesce(func.sum(Payment.amount), Decimal("0.00"))
@@ -55,7 +95,10 @@ class ReportRepository:
             )
             .join(Enrollment, Enrollment.student_id == Student.id)
             .join(Payment, Payment.enrollment_id == Enrollment.id)
-            .where(Payment.status == PaymentStatus.OVERDUE)
+            .where(
+                Payment.status == PaymentStatus.OVERDUE,
+                Enrollment.status != EnrollmentStatus.CANCELLED,
+            )
             .group_by(Student.id, Student.name, Student.cpf, Student.email)
             .order_by(Student.id)
         )
@@ -79,7 +122,13 @@ class ReportRepository:
                 Plan.name.label("plan_name"),
                 enrollments_count.label("enrollments_count"),
             )
-            .outerjoin(Enrollment, Enrollment.plan_id == Plan.id)
+            .outerjoin(
+                Enrollment,
+                and_(
+                    Enrollment.plan_id == Plan.id,
+                    Enrollment.status != EnrollmentStatus.CANCELLED,
+                ),
+            )
             .group_by(Plan.id, Plan.name)
             .order_by(enrollments_count.desc(), Plan.id)
         )
@@ -100,12 +149,40 @@ class ReportRepository:
         end_date: date | None,
     ) -> RevenueSummaryReport:
         statement = self._payment_date_filtered_statement(start_date=start_date, end_date=end_date)
+        billable_amount = case(
+            (
+                or_(
+                    Enrollment.status != EnrollmentStatus.CANCELLED,
+                    Payment.status == PaymentStatus.PAID,
+                ),
+                Payment.amount,
+            ),
+            else_=0,
+        )
         paid_amount = case((Payment.status == PaymentStatus.PAID, Payment.amount), else_=0)
-        overdue_amount = case((Payment.status == PaymentStatus.OVERDUE, Payment.amount), else_=0)
-        pending_amount = case((Payment.status == PaymentStatus.PENDING, Payment.amount), else_=0)
+        overdue_amount = case(
+            (
+                and_(
+                    Payment.status == PaymentStatus.OVERDUE,
+                    Enrollment.status != EnrollmentStatus.CANCELLED,
+                ),
+                Payment.amount,
+            ),
+            else_=0,
+        )
+        pending_amount = case(
+            (
+                and_(
+                    Payment.status == PaymentStatus.PENDING,
+                    Enrollment.status != EnrollmentStatus.CANCELLED,
+                ),
+                Payment.amount,
+            ),
+            else_=0,
+        )
         result = await session.execute(
             statement.with_only_columns(
-                func.coalesce(func.sum(Payment.amount), Decimal("0.00")).label(
+                func.coalesce(func.sum(billable_amount), Decimal("0.00")).label(
                     "expected_revenue"
                 ),
                 func.coalesce(func.sum(paid_amount), Decimal("0.00")).label("received_revenue"),
@@ -185,7 +262,7 @@ class ReportRepository:
         start_date: date | None,
         end_date: date | None,
     ) -> Select[tuple[Payment]]:
-        statement = select(Payment)
+        statement = select(Payment).join(Enrollment, Enrollment.id == Payment.enrollment_id)
         if start_date is not None:
             statement = statement.where(Payment.due_date >= start_date)
         if end_date is not None:

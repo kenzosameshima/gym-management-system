@@ -3,7 +3,6 @@ from fastapi import APIRouter, Depends, Query, status
 from app.auth.permissions import require_roles
 from app.core.enums import EnrollmentStatus, UserRole
 from app.database.session import AsyncSessionDependency
-from app.models.enrollment import Enrollment
 from app.schemas.enrollment import EnrollmentCreate, EnrollmentRead, EnrollmentUpdate
 from app.schemas.pagination import Page
 from app.services.enrollment_service import EnrollmentService, get_enrollment_service
@@ -25,7 +24,7 @@ async def create_enrollment(
     payload: EnrollmentCreate,
     session: AsyncSessionDependency,
     service: EnrollmentService = Depends(get_enrollment_service),
-) -> Enrollment:
+) -> EnrollmentRead:
     return await service.create_enrollment(session=session, payload=payload)
 
 
@@ -72,7 +71,7 @@ async def get_enrollment(
     enrollment_id: int,
     session: AsyncSessionDependency,
     service: EnrollmentService = Depends(get_enrollment_service),
-) -> Enrollment:
+) -> EnrollmentRead:
     return await service.get_enrollment(session=session, enrollment_id=enrollment_id)
 
 
@@ -89,7 +88,7 @@ async def update_enrollment(
     payload: EnrollmentUpdate,
     session: AsyncSessionDependency,
     service: EnrollmentService = Depends(get_enrollment_service),
-) -> Enrollment:
+) -> EnrollmentRead:
     return await service.update_enrollment(
         session=session,
         enrollment_id=enrollment_id,
@@ -109,5 +108,5 @@ async def cancel_enrollment(
     enrollment_id: int,
     session: AsyncSessionDependency,
     service: EnrollmentService = Depends(get_enrollment_service),
-) -> Enrollment:
+) -> EnrollmentRead:
     return await service.cancel_enrollment(session=session, enrollment_id=enrollment_id)

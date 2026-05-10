@@ -2,7 +2,7 @@ from datetime import date, datetime
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-from app.core.enums import EnrollmentStatus
+from app.core.enums import EnrollmentStatus, PaymentStatus
 
 
 class EnrollmentCreate(BaseModel):
@@ -34,5 +34,6 @@ class EnrollmentRead(BaseModel):
     start_date: date
     end_date: date
     status: EnrollmentStatus
+    payment_status: PaymentStatus | None
     created_at: datetime
     updated_at: datetime

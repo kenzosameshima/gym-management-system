@@ -126,6 +126,12 @@ async def test_defaulters_report_returns_overdue_students_and_sums_amount(
         cpf="98765432100",
         email="clean@example.com",
     )
+    cancelled_student_id = await create_student(
+        client,
+        headers,
+        cpf="22233344455",
+        email="cancelled@example.com",
+    )
     plan_id = await create_plan(client, headers, price="150.00")
     clean_plan_id = await create_plan(client, headers, name="Clean Plan", price="80.00")
     overdue_enrollment_id = await create_enrollment(
@@ -153,6 +159,20 @@ async def test_defaulters_report_returns_overdue_students_and_sums_amount(
         plan_id=clean_plan_id,
         first_payment_due_date="2026-05-10",
     )
+    cancelled_enrollment_id = await create_enrollment(
+        client,
+        headers,
+        student_id=cancelled_student_id,
+        plan_id=clean_plan_id,
+        first_payment_due_date="2026-05-10",
+    )
+    cancelled_payment_id = await latest_payment_id(client, headers)
+    await client.put(
+        f"/api/payments/{cancelled_payment_id}",
+        json={"status": "OVERDUE"},
+        headers=headers,
+    )
+    await client.delete(f"/api/enrollments/{cancelled_enrollment_id}", headers=headers)
 
     response = await client.get("/api/reports/students/defaulters", headers=headers)
 
@@ -182,7 +202,13 @@ async def test_most_used_plans_counts_and_orders_descending(client: AsyncClient)
     )
     await create_enrollment(client, headers, student_id=first_student_id, plan_id=plan_a_id)
     await create_enrollment(client, headers, student_id=second_student_id, plan_id=plan_a_id)
-    await create_enrollment(client, headers, student_id=third_student_id, plan_id=plan_b_id)
+    cancelled_enrollment_id = await create_enrollment(
+        client,
+        headers,
+        student_id=third_student_id,
+        plan_id=plan_b_id,
+    )
+    await client.delete(f"/api/enrollments/{cancelled_enrollment_id}", headers=headers)
 
     response = await client.get("/api/reports/plans/most-used", headers=headers)
 
@@ -195,7 +221,7 @@ async def test_most_used_plans_counts_and_orders_descending(client: AsyncClient)
     assert response.json()["plans"][1] == {
         "plan_id": plan_b_id,
         "plan_name": "Plan B",
-        "enrollments_count": 1,
+        "enrollments_count": 0,
     }
 
 
@@ -222,6 +248,18 @@ async def test_revenue_summary_calculates_totals_and_respects_date_filter(
         headers,
         cpf="55566677788",
         email="four@example.com",
+    )
+    student_five_id = await create_student(
+        client,
+        headers,
+        cpf="22233344455",
+        email="five@example.com",
+    )
+    student_six_id = await create_student(
+        client,
+        headers,
+        cpf="33344455566",
+        email="six@example.com",
     )
 
     await create_enrollment(
@@ -260,6 +298,28 @@ async def test_revenue_summary_calculates_totals_and_respects_date_filter(
         plan_id=plan_id,
         first_payment_due_date="2026-06-15",
     )
+    cancelled_pending_enrollment_id = await create_enrollment(
+        client,
+        headers,
+        student_id=student_five_id,
+        plan_id=plan_id,
+        first_payment_due_date="2026-05-20",
+    )
+    await client.delete(f"/api/enrollments/{cancelled_pending_enrollment_id}", headers=headers)
+    cancelled_paid_enrollment_id = await create_enrollment(
+        client,
+        headers,
+        student_id=student_six_id,
+        plan_id=plan_id,
+        first_payment_due_date="2026-05-25",
+    )
+    cancelled_paid_payment_id = await latest_payment_id(client, headers)
+    await client.put(
+        f"/api/payments/{cancelled_paid_payment_id}",
+        json={"status": "PAID"},
+        headers=headers,
+    )
+    await client.delete(f"/api/enrollments/{cancelled_paid_enrollment_id}", headers=headers)
 
     response = await client.get(
         "/api/reports/revenue/summary?start_date=2026-05-01&end_date=2026-05-31",
@@ -272,8 +332,8 @@ async def test_revenue_summary_calculates_totals_and_respects_date_filter(
 
     assert response.status_code == 200
     assert response.json() == {
-        "expected_revenue": "300.00",
-        "received_revenue": "100.00",
+        "expected_revenue": "400.00",
+        "received_revenue": "200.00",
         "overdue_revenue": "100.00",
         "pending_revenue": "100.00",
     }

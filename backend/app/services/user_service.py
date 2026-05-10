@@ -1,9 +1,12 @@
 from fastapi import Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.enums import UserRole
 from app.core.exceptions import ApplicationError
 from app.models.user import User
 from app.repositories.user_repository import UserRepository, get_user_repository
+from app.schemas.pagination import Page
+from app.schemas.user import UserRead
 
 
 class UserService:
@@ -19,6 +22,27 @@ class UserService:
                 status_code=status.HTTP_401_UNAUTHORIZED,
             )
         return user
+
+    async def list_users(
+        self,
+        session: AsyncSession,
+        *,
+        limit: int,
+        offset: int,
+        role: UserRole | None,
+    ) -> Page[UserRead]:
+        users, total = await self._repository.list(
+            session,
+            limit=limit,
+            offset=offset,
+            role=role,
+        )
+        return Page[UserRead](
+            items=list(users),
+            total=total,
+            limit=limit,
+            offset=offset,
+        )
 
 
 def get_user_service(
