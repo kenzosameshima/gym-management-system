@@ -4,11 +4,17 @@ import type { Page } from "../types/common";
 
 const ACCESS_ENDPOINTS = {
   check: "/api/access-control/check",
+  checkByStudentId: (studentId: number) => `/api/access-control/${studentId}/check`,
   logs: "/api/access/logs"
 } as const;
 
 export async function checkAccess(payload: AccessCheckRequest): Promise<AccessDecision> {
   const response = await httpClient.post<AccessDecision>(ACCESS_ENDPOINTS.check, payload);
+  return response.data;
+}
+
+export async function checkAccessByStudentId(studentId: number): Promise<AccessDecision> {
+  const response = await httpClient.post<AccessDecision>(ACCESS_ENDPOINTS.checkByStudentId(studentId));
   return response.data;
 }
 

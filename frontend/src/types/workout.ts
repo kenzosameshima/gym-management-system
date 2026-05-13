@@ -34,6 +34,18 @@ export interface WorkoutPlanQueryParams extends PageQueryParams {
   status?: Status;
 }
 
+export interface WorkoutPlanTransferPayload {
+  from_instructor_id: number;
+  to_instructor_id: number;
+  status?: Status;
+}
+
+export interface WorkoutPlanTransferResult {
+  from_instructor_id: number;
+  to_instructor_id: number;
+  transferred_count: number;
+}
+
 export interface Exercise {
   id: number;
   workout_plan_id: number;

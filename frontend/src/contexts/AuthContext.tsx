@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
-import { getCurrentUser, login as loginRequest } from "../api/authApi";
+import { changePassword as changePasswordRequest, getCurrentUser, login as loginRequest } from "../api/authApi";
 import { AUTH_TOKEN_STORAGE_KEY } from "../api/httpClient";
 import type { AuthUser, LoginRequest } from "../types/auth";
 import type { Role } from "../types/common";
@@ -9,7 +9,8 @@ interface AuthContextValue {
   token: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (payload: LoginRequest) => Promise<void>;
+  login: (payload: LoginRequest) => Promise<AuthUser>;
+  changePassword: (currentPassword: string, newPassword: string) => Promise<AuthUser>;
   logout: () => void;
   hasRole: (roles: Role[]) => boolean;
 }
@@ -62,13 +63,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }): JSX.E
     };
   }, [logout, token]);
 
-  const login = useCallback(async (payload: LoginRequest): Promise<void> => {
+  const login = useCallback(async (payload: LoginRequest): Promise<AuthUser> => {
     const authToken = await loginRequest(payload);
     localStorage.setItem(AUTH_TOKEN_STORAGE_KEY, authToken.access_token);
     setToken(authToken.access_token);
     const currentUser = await getCurrentUser();
     setUser(currentUser);
+    return currentUser;
   }, []);
+
+  const changePassword = useCallback(
+    async (currentPassword: string, newPassword: string): Promise<AuthUser> => {
+      const updatedUser = await changePasswordRequest({
+        current_password: currentPassword,
+        new_password: newPassword
+      });
+      setUser(updatedUser);
+      return updatedUser;
+    },
+    []
+  );
 
   const hasRole = useCallback(
     (roles: Role[]): boolean => user !== null && roles.includes(user.role),
@@ -82,10 +96,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }): JSX.E
       isAuthenticated: user !== null && token !== null,
       isLoading,
       login,
+      changePassword,
       logout,
       hasRole
     }),
-    [hasRole, isLoading, login, logout, token, user]
+    [changePassword, hasRole, isLoading, login, logout, token, user]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

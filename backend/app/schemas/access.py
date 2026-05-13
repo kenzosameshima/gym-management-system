@@ -11,6 +11,7 @@ class AccessCheckRequest(BaseModel):
 
 class AccessDecision(BaseModel):
     student_id: int | None
+    student_name: str | None = None
     cpf_attempted: str
     allowed: bool
     reason: AccessDeniedReason | None

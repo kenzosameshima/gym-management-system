@@ -5,7 +5,7 @@ from app.models.exercise_progress import ExerciseProgress
 from app.models.payment import Payment
 from app.models.plan import Plan
 from app.models.student import Student
-from app.models.user import User
+from app.models.user import User, UserAuditLog
 from app.models.workout_plan import WorkoutPlan
 
 __all__ = [
@@ -17,5 +17,6 @@ __all__ = [
     "Plan",
     "Student",
     "User",
+    "UserAuditLog",
     "WorkoutPlan",
 ]

@@ -64,7 +64,7 @@ Main backend domains:
 
 ```text
 auth
-users
+users / team
 students
 plans
 enrollments
@@ -115,7 +115,9 @@ Main frontend routes:
 
 ```text
 /login
+/change-password
 /dashboard
+/team
 /students
 /plans
 /enrollments
@@ -131,6 +133,7 @@ The database uses PostgreSQL. Main entities:
 
 ```text
 users
+user_audit_logs
 students
 plans
 enrollments
@@ -148,6 +151,7 @@ Main relationships:
 - `enrollments` generate `payments`.
 - `access_logs` register CPF-based access attempts.
 - `users` with the `INSTRUCTOR` role can be linked to `workout_plans`.
+- `user_audit_logs` store staff administration events.
 - `workout_plans` contain `exercises`.
 - `exercises` have historical records in `exercise_progress`.
 
@@ -218,5 +222,21 @@ PostgreSQL: localhost:5432
 - Every access attempt generates an `AccessLog`, including attempts with nonexistent CPFs.
 - Access logs can be queried by `ADMIN` and `RECEPTIONIST`.
 - Instructors can manage workout plans, exercises, and exercise progress tracking.
+- Admins manage staff accounts in Team.
+- Staff users created by admins receive a temporary password and must change it on first login.
+- Admins can reset staff passwords by issuing a new temporary password.
+- User administration events are audited.
+- Active workout plans can be transferred between instructors before deactivating an instructor.
 - The reporting layer is read-only and separated from CRUD services.
 - The dashboard consumes report endpoints instead of using a single dashboard endpoint.
+
+## Default Local Credentials
+
+When no active admin exists, Docker startup seeds the first administrator from `backend/.env.example`:
+
+```text
+Email: admin@example.com
+Password: strong-password
+```
+
+There are no default instructor or receptionist accounts. Create them from **Equipe** after logging in as admin.

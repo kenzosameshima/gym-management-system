@@ -78,3 +78,13 @@ class StudentRead(BaseModel):
     financial_status: FinancialStatus
     created_at: datetime
     updated_at: datetime
+
+
+class StudentSearchResult(BaseModel):
+    id: int
+    name: str
+    cpf: str
+    phone: str
+    email: EmailStr
+    status: StudentStatus
+    financial_status: FinancialStatus

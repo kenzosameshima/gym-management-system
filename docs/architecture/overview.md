@@ -1,6 +1,6 @@
 # Architecture Overview
 
-The project uses a layered FastAPI backend and a React frontend. The v1.0.0 MVP covers authentication, students, plans, enrollments, payments, access control, workouts, reports, and dashboard workflows.
+The project uses a layered FastAPI backend and a React frontend. The v1.0.0 MVP covers authentication, role-based staff management, students, plans, enrollments, payments, access control, workouts, reports, and dashboard workflows.
 
 Backend flow:
 
@@ -34,8 +34,11 @@ flowchart LR
     Workouts((Manage workouts))
     Reports((View reports))
     Dashboard((View dashboard))
+    Team((Manage team))
+    Password((Change temporary password))
 
     Admin --> Auth
+    Admin --> Team
     Admin --> Students
     Admin --> Plans
     Admin --> Enrollments
@@ -45,6 +48,7 @@ flowchart LR
     Admin --> Workouts
     Admin --> Reports
     Admin --> Dashboard
+    Admin --> Password
 
     Receptionist --> Auth
     Receptionist --> Students
@@ -55,12 +59,14 @@ flowchart LR
     Receptionist --> AccessLogs
     Receptionist --> Reports
     Receptionist --> Dashboard
+    Receptionist --> Password
 
     Instructor --> Auth
     Instructor --> Students
     Instructor --> Workouts
     Instructor --> Reports
     Instructor --> Dashboard
+    Instructor --> Password
 ```
 
 ### ER Diagram
@@ -68,6 +74,8 @@ flowchart LR
 ```mermaid
 erDiagram
     USERS ||--o{ WORKOUT_PLANS : instructs
+    USERS ||--o{ USER_AUDIT_LOGS : acts
+    USERS ||--o{ USER_AUDIT_LOGS : targeted_by
     STUDENTS ||--o{ ENROLLMENTS : has
     PLANS ||--o{ ENROLLMENTS : selected_in
     ENROLLMENTS ||--o{ PAYMENTS : generates
@@ -83,6 +91,17 @@ erDiagram
         string full_name
         string role
         bool is_active
+        bool must_change_password
+        datetime last_login_at
+    }
+
+    USER_AUDIT_LOGS {
+        int id PK
+        int actor_user_id FK
+        int target_user_id FK
+        string action
+        string details
+        datetime created_at
     }
 
     STUDENTS {
@@ -219,7 +238,17 @@ Workout domain is split into workout plans, exercises, and exercise progress:
 - `Exercise` belongs to a workout plan and is soft-deleted with `INACTIVE` status.
 - `ExerciseProgress` is append-only history for student progress on an exercise.
 
-Workout plan and exercise writes are restricted to `ADMIN` and `INSTRUCTOR`. `RECEPTIONIST` can read workout data but cannot create or edit it.
+Workout plan and exercise writes are restricted to `ADMIN` and `INSTRUCTOR`. `RECEPTIONIST` has no workout-domain API access. Active workout plans can be transferred between active instructors by `ADMIN`.
+
+Staff administration is handled through the user domain:
+
+- Public registration is disabled.
+- The first admin can be seeded from `INITIAL_ADMIN_*` settings.
+- Admins create staff users with temporary passwords.
+- Users marked with `must_change_password=true` must change password before using role-protected endpoints.
+- Admins can reset staff passwords without knowing the current password.
+- User administration events are recorded in `user_audit_logs`.
+- The last active admin cannot be deactivated or demoted.
 
 Reports are implemented as a dedicated analytics layer:
 
@@ -240,7 +269,7 @@ Frontend integration is organized as a routed React application:
 - `frontend/src/contexts/AuthContext.tsx` owns JWT token state, localStorage persistence, `/api/auth/me` hydration, and logout.
 - `frontend/src/routes` owns protected routes and role gates.
 - `frontend/src/layouts/AppLayout.tsx` provides the authenticated shell and navigation.
-- `frontend/src/pages` contains the first operational screens for dashboard, CRUD workflows, access checks, workouts, and reports.
+- `frontend/src/pages` contains operational screens for dashboard, team management, CRUD workflows, access checks, workouts, reports, and mandatory password change.
 
 The frontend stores the access token in localStorage for this phase and attaches it through the shared Axios client. Navigation is role-aware and hides inaccessible areas, but backend authorization remains the source of truth.
 
@@ -248,7 +277,13 @@ Known frontend limitations:
 
 - Refresh tokens are not implemented because the backend does not expose them.
 - Reporting and dashboard charts are operational summaries, not advanced analytics or exports.
-- Relationship selection remains ID-based in some operational forms.
+- Some relationship selection flows can still be polished further for production ergonomics.
+
+Role landing pages:
+
+- `ADMIN` -> `/dashboard`
+- `INSTRUCTOR` -> `/workouts`
+- `RECEPTIONIST` -> `/students`
 
 Phase 8 adds operational UX structure on top of the first integration:
 
@@ -268,7 +303,7 @@ The dashboard remains role-aware:
 Known Phase 8 limitations:
 
 - Charts are simple operational summaries, not an advanced analytics engine.
-- Relationship selection remains ID-based.
+- Some relationship selection flows can still be polished further.
 - Tablet responsiveness is prioritized; mobile polish remains limited.
 
 Phase 9 hardening adds release-candidate stability work:

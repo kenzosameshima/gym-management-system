@@ -36,6 +36,7 @@ class AccessControlService:
         today = date.today()
         student = await self._student_repository.get_by_cpf(session, cpf)
         student_id = student.id if student is not None else None
+        student_name = student.name if student is not None else None
         allowed = False
         reason: AccessDeniedReason | None
 
@@ -86,6 +87,7 @@ class AccessControlService:
             await session.commit()
             return AccessDecision(
                 student_id=student_id,
+                student_name=student_name,
                 cpf_attempted=cpf,
                 allowed=allowed,
                 reason=reason,
@@ -138,6 +140,7 @@ class AccessControlService:
             await session.commit()
             return AccessDecision(
                 student_id=None,
+                student_name=None,
                 cpf_attempted=cpf_attempted,
                 allowed=False,
                 reason=reason,

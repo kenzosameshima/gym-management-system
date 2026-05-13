@@ -9,7 +9,7 @@ from app.models.payment import Payment
 from app.models.student import Student
 from app.repositories.student_repository import StudentRepository, get_student_repository
 from app.schemas.pagination import Page
-from app.schemas.student import StudentCreate, StudentRead, StudentUpdate
+from app.schemas.student import StudentCreate, StudentRead, StudentSearchResult, StudentUpdate
 
 
 class StudentService:
@@ -49,6 +49,28 @@ class StudentService:
     async def get_student(self, session: AsyncSession, student_id: int) -> StudentRead:
         student = await self._get_student_model(session, student_id)
         return (await self._to_student_reads(session, [student]))[0]
+
+    async def search_students(
+        self,
+        session: AsyncSession,
+        *,
+        query: str,
+        limit: int,
+    ) -> list[StudentSearchResult]:
+        students = list(await self._repository.search(session, query=query.strip(), limit=limit))
+        student_reads = await self._to_student_reads(session, students)
+        return [
+            StudentSearchResult(
+                id=student.id,
+                name=student.name,
+                cpf=student.cpf,
+                phone=student.phone,
+                email=student.email,
+                status=student.status,
+                financial_status=student.financial_status,
+            )
+            for student in student_reads
+        ]
 
     async def _get_student_model(self, session: AsyncSession, student_id: int) -> Student:
         student = await self._repository.get_by_id(session, student_id)

@@ -17,6 +17,8 @@ from app.schemas.workout import (
     ExerciseUpdate,
     WorkoutPlanCreate,
     WorkoutPlanRead,
+    WorkoutPlanTransfer,
+    WorkoutPlanTransferResult,
     WorkoutPlanUpdate,
 )
 from app.services.workout_service import (
@@ -30,8 +32,9 @@ from app.services.workout_service import (
 
 router = APIRouter(tags=["workouts"])
 
-WORKOUT_READ_ROLES = (UserRole.ADMIN, UserRole.INSTRUCTOR, UserRole.RECEPTIONIST)
+WORKOUT_READ_ROLES = (UserRole.ADMIN, UserRole.INSTRUCTOR)
 WORKOUT_WRITE_ROLES = (UserRole.ADMIN, UserRole.INSTRUCTOR)
+WORKOUT_ADMIN_ROLES = (UserRole.ADMIN,)
 
 
 @router.post(
@@ -139,6 +142,20 @@ async def delete_workout_plan(
     service: WorkoutPlanService = Depends(get_workout_plan_service),
 ) -> WorkoutPlan:
     return await service.delete_workout_plan(session=session, workout_plan_id=workout_plan_id)
+
+
+@router.post(
+    "/api/workout-plans/transfer",
+    response_model=WorkoutPlanTransferResult,
+    status_code=status.HTTP_200_OK,
+    dependencies=[Depends(require_roles(*WORKOUT_ADMIN_ROLES))],
+)
+async def transfer_workout_plans(
+    payload: WorkoutPlanTransfer,
+    session: AsyncSessionDependency,
+    service: WorkoutPlanService = Depends(get_workout_plan_service),
+) -> WorkoutPlanTransferResult:
+    return await service.transfer_workout_plans(session=session, payload=payload)
 
 
 @router.post(

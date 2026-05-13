@@ -98,10 +98,34 @@ function studentTone(student: Student): "success" | "warning" | "danger" | "neut
   return "success";
 }
 
+function accessReasonLabel(reason: AccessDecision["reason"]): string {
+  const labels: Record<NonNullable<AccessDecision["reason"]>, string> = {
+    STUDENT_NOT_FOUND: "Aluno não encontrado",
+    STUDENT_INACTIVE: "Aluno inativo",
+    NO_ACTIVE_ENROLLMENT: "Sem matrícula ativa",
+    ENROLLMENT_EXPIRED: "Matrícula expirada",
+    PAYMENT_OVERDUE: "Pagamento vencido"
+  };
+  return reason === null ? "Entrada liberada" : labels[reason];
+}
+
 export function StudentWorkspacePage(): JSX.Element {
   const { user } = useAuth();
   const [searchParams] = useSearchParams();
   const canManageStudents = user?.role === "ADMIN" || user?.role === "RECEPTIONIST";
+  const canViewWorkoutContext = user?.role === "ADMIN" || user?.role === "INSTRUCTOR";
+  const visibleWorkspaceTabs = useMemo(
+    () => WORKSPACE_TABS.filter((tab) => {
+      if (tab.key === "workouts") {
+        return canViewWorkoutContext;
+      }
+      if (tab.key === "membership" || tab.key === "payments" || tab.key === "access") {
+        return canManageStudents;
+      }
+      return true;
+    }),
+    [canManageStudents, canViewWorkoutContext]
+  );
   const [page, setPage] = useState<Page<Student> | null>(null);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [workspaceData, setWorkspaceData] = useState<StudentWorkspaceData>(EMPTY_WORKSPACE_DATA);
@@ -149,12 +173,13 @@ export function StudentWorkspacePage(): JSX.Element {
     setIsWorkspaceLoading(true);
     setWorkspaceError(null);
     try {
-      const workoutPlansPromise = getWorkoutPlans({ limit: 20, student_id: student.id });
-
       if (!canManageStudents) {
+        const workoutPlanPage = canViewWorkoutContext
+          ? await getWorkoutPlans({ limit: 20, student_id: student.id })
+          : { items: [] };
         setWorkspaceData({
           ...EMPTY_WORKSPACE_DATA,
-          workoutPlans: (await workoutPlansPromise).items
+          workoutPlans: workoutPlanPage.items
         });
         return;
       }
@@ -163,7 +188,7 @@ export function StudentWorkspacePage(): JSX.Element {
         getEnrollments({ limit: 20, student_id: student.id }),
         getPayments({ limit: 50, student_search: student.cpf }),
         getPlans({ limit: 100 }),
-        workoutPlansPromise,
+        canViewWorkoutContext ? getWorkoutPlans({ limit: 20, student_id: student.id }) : Promise.resolve({ items: [] }),
         getAccessLogs({ limit: 50 })
       ]);
 
@@ -194,7 +219,13 @@ export function StudentWorkspacePage(): JSX.Element {
       return;
     }
     void loadWorkspace(selectedStudent);
-  }, [selectedStudent?.id, canManageStudents]);
+  }, [selectedStudent?.id, canManageStudents, canViewWorkoutContext]);
+
+  useEffect(() => {
+    if (!visibleWorkspaceTabs.some((tab) => tab.key === workspaceTab)) {
+      setWorkspaceTab("overview");
+    }
+  }, [visibleWorkspaceTabs, workspaceTab]);
 
   function openCreateDrawer(): void {
     setEditingId(null);
@@ -414,7 +445,7 @@ export function StudentWorkspacePage(): JSX.Element {
                 ]}
               />
               <div className="student-tabs" role="tablist" aria-label="Contexto do aluno">
-                {WORKSPACE_TABS.map((tab) => (
+                {visibleWorkspaceTabs.map((tab) => (
                   <button
                     key={tab.key}
                     type="button"
@@ -437,6 +468,7 @@ export function StudentWorkspacePage(): JSX.Element {
                   overduePayments={overduePayments}
                   pendingPayments={pendingPayments}
                   canViewManagementContext={canManageStudents}
+                  canViewWorkoutContext={canViewWorkoutContext}
                   onMarkPaid={handleMarkPaid}
                 />
               )}
@@ -481,6 +513,7 @@ interface StudentWorkspaceContentProps {
   overduePayments: Payment[];
   pendingPayments: Payment[];
   canViewManagementContext: boolean;
+  canViewWorkoutContext: boolean;
   onMarkPaid: (paymentId: number) => Promise<void>;
 }
 
@@ -492,10 +525,14 @@ function StudentWorkspaceContent({
   overduePayments,
   pendingPayments,
   canViewManagementContext,
+  canViewWorkoutContext,
   onMarkPaid
 }: StudentWorkspaceContentProps): JSX.Element {
   if (!canViewManagementContext && tab !== "overview" && tab !== "workouts") {
     return <EmptyState message="Este contexto está disponível para administradores e recepção." />;
+  }
+  if (!canViewWorkoutContext && tab === "workouts") {
+    return <EmptyState message="Este contexto está disponível para administradores e instrutores." />;
   }
 
   if (tab === "overview") {
@@ -505,7 +542,7 @@ function StudentWorkspaceContent({
           <StatCard label="Status" value={formatFinancialStatus(student.status)} />
           <StatCard label="Financeiro" value={formatFinancialStatus(student.financial_status)} />
           <StatCard label="Matrículas" value={canViewManagementContext ? data.enrollments.length : "-"} />
-          <StatCard label="Fichas de treino" value={data.workoutPlans.length} />
+          <StatCard label="Fichas de treino" value={canViewWorkoutContext ? data.workoutPlans.length : "-"} />
         </div>
         <ContextPanel title="Dados de contato">
           <dl className="detail-list">
@@ -533,8 +570,7 @@ function StudentWorkspaceContent({
 
   if (tab === "membership") {
     const columns: Column<Enrollment>[] = [
-      { key: "id", header: "ID", render: (enrollment) => enrollment.id },
-      { key: "plan", header: "Plano", render: (enrollment) => data.plans.find((plan) => plan.id === enrollment.plan_id)?.name ?? `Plano #${enrollment.plan_id}` },
+      { key: "plan", header: "Plano", render: (enrollment) => data.plans.find((plan) => plan.id === enrollment.plan_id)?.name ?? "Plano não encontrado" },
       { key: "start", header: "Início", render: (enrollment) => formatDate(enrollment.start_date) },
       { key: "end", header: "Fim", render: (enrollment) => formatDate(enrollment.end_date) },
       { key: "status", header: "Status", render: (enrollment) => <StatusBadge>{formatFinancialStatus(enrollment.status)}</StatusBadge> },
@@ -564,7 +600,6 @@ function StudentWorkspaceContent({
 
   if (tab === "workouts") {
     const columns: Column<WorkoutPlan>[] = [
-      { key: "id", header: "ID", render: (plan) => plan.id },
       { key: "goal", header: "Objetivo", render: (plan) => plan.goal },
       { key: "status", header: "Status", render: (plan) => <StatusBadge>{formatFinancialStatus(plan.status)}</StatusBadge> },
       { key: "updated", header: "Atualizado", render: (plan) => formatDateTime(plan.updated_at) }
@@ -587,7 +622,7 @@ function StudentWorkspaceContent({
     { key: "date", header: "Data", render: (item) => item.id === 0 ? "Agora" : formatDateTime(item.accessed_at) },
     { key: "result", header: "Resultado", render: (item) => <StatusBadge tone={item.allowed ? "success" : "danger"}>{item.allowed ? "Liberado" : "Bloqueado"}</StatusBadge> },
     { key: "cpf", header: "CPF", render: (item) => item.cpf_attempted },
-    { key: "reason", header: "Motivo", render: (item) => item.reason ?? "-" }
+    { key: "reason", header: "Motivo", render: (item) => accessReasonLabel(item.reason) }
   ];
   return <DataTable columns={columns} rows={accessRows} getRowKey={(item) => `${item.id}-${item.accessed_at}-${item.cpf_attempted}`} emptyMessage="Nenhum acesso recente encontrado para este aluno." />;
 }

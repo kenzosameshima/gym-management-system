@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
 import { cancelEnrollment, createEnrollment, getEnrollments } from "../api/enrollmentsApi";
 import { getPlans } from "../api/plansApi";
@@ -11,7 +11,7 @@ import type { Page } from "../types/common";
 import type { Enrollment, EnrollmentCreatePayload } from "../types/enrollment";
 import type { Plan } from "../types/plan";
 import type { Student } from "../types/student";
-import { formatDate, getErrorMessage } from "./pageUtils";
+import { formatDate, formatFinancialStatus, getErrorMessage } from "./pageUtils";
 
 const EMPTY_FORM: EnrollmentCreatePayload = {
   student_id: 0,
@@ -85,14 +85,22 @@ export function EnrollmentsPage(): JSX.Element {
     }
   }
 
+  function studentName(enrollment: Enrollment): string {
+    return students.find((student) => student.id === enrollment.student_id)?.name ?? "Aluno não encontrado";
+  }
+
+  const enrollmentRows = useMemo(
+    () => [...(page?.items ?? [])].sort((left, right) => studentName(left).localeCompare(studentName(right))),
+    [page?.items, students]
+  );
+
   const columns: Column<Enrollment>[] = [
-    { key: "id", header: "ID", render: (enrollment) => enrollment.id, sortValue: (enrollment) => enrollment.id },
-    { key: "student", header: "Aluno", render: (enrollment) => students.find((student) => student.id === enrollment.student_id)?.name ?? `Aluno #${enrollment.student_id}` },
-    { key: "plan", header: "Plano", render: (enrollment) => plans.find((plan) => plan.id === enrollment.plan_id)?.name ?? `Plano #${enrollment.plan_id}` },
+    { key: "student", header: "Aluno", render: studentName, sortValue: studentName },
+    { key: "plan", header: "Plano", render: (enrollment) => plans.find((plan) => plan.id === enrollment.plan_id)?.name ?? "Plano não encontrado" },
     { key: "start", header: "Inicio", render: (enrollment) => formatDate(enrollment.start_date) },
     { key: "end", header: "Fim", render: (enrollment) => formatDate(enrollment.end_date) },
-    { key: "status", header: "Status", render: (enrollment) => enrollment.status, sortValue: (enrollment) => enrollment.status },
-    { key: "payment", header: "Pagamento", render: (enrollment) => enrollment.payment_status ?? "-" },
+    { key: "status", header: "Status", render: (enrollment) => formatFinancialStatus(enrollment.status), sortValue: (enrollment) => enrollment.status },
+    { key: "payment", header: "Pagamento", render: (enrollment) => enrollment.payment_status === null ? "-" : formatFinancialStatus(enrollment.payment_status) },
     {
       key: "actions",
       header: "Acoes",
@@ -103,7 +111,7 @@ export function EnrollmentsPage(): JSX.Element {
       )
     }
   ];
-  const sorted = useSortableRows(page?.items ?? [], columns);
+  const sorted = useSortableRows(enrollmentRows, columns);
 
   return (
     <section className="page-stack">
@@ -113,7 +121,7 @@ export function EnrollmentsPage(): JSX.Element {
         <label>Buscar aluno<input placeholder="Nome, CPF ou e-mail" value={studentSearch} onChange={(event) => setStudentSearch(event.target.value)} /></label>
         <label>Status<select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
           <option value="">Todos</option>
-          {ENROLLMENT_STATUSES.map((status) => <option key={status}>{status}</option>)}
+          {ENROLLMENT_STATUSES.map((status) => <option key={status} value={status}>{formatFinancialStatus(status)}</option>)}
         </select></label>
         <button type="submit">Filtrar</button>
       </form>

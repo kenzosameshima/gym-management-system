@@ -31,7 +31,7 @@ from app.models.exercise_progress import ExerciseProgress
 from app.models.payment import Payment
 from app.models.plan import Plan
 from app.models.student import Student
-from app.models.user import User
+from app.models.user import User, UserAuditLog
 from app.models.workout_plan import WorkoutPlan
 
 
@@ -57,6 +57,7 @@ async def clean_database() -> AsyncGenerator[None, None]:
         await session.execute(delete(Enrollment))
         await session.execute(delete(Plan))
         await session.execute(delete(Student))
+        await session.execute(delete(UserAuditLog))
         await session.execute(delete(User))
         await session.commit()
 
@@ -71,5 +72,6 @@ async def clean_database() -> AsyncGenerator[None, None]:
         await session.execute(delete(Enrollment))
         await session.execute(delete(Plan))
         await session.execute(delete(Student))
+        await session.execute(delete(UserAuditLog))
         await session.execute(delete(User))
         await session.commit()

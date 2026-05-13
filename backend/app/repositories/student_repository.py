@@ -1,9 +1,10 @@
 from collections.abc import Sequence
 
-from sqlalchemy import Select, func, or_, select
+from sqlalchemy import Select, String, cast, exists, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.enums import StudentStatus
+from app.models.enrollment import Enrollment
 from app.models.student import Student
 from app.schemas.student import StudentCreate, StudentUpdate
 
@@ -42,6 +43,31 @@ class StudentRepository:
     async def get_by_email(self, session: AsyncSession, email: str) -> Student | None:
         result = await session.execute(select(Student).where(Student.email == email))
         return result.scalar_one_or_none()
+
+    async def search(self, session: AsyncSession, *, query: str, limit: int) -> Sequence[Student]:
+        term = f"%{query}%"
+        enrollment_match = exists(
+            select(Enrollment.id).where(
+                Enrollment.student_id == Student.id,
+                cast(Enrollment.id, String).ilike(term),
+            )
+        )
+        statement = (
+            select(Student)
+            .where(
+                or_(
+                    Student.name.ilike(term),
+                    Student.cpf.ilike(term),
+                    Student.phone.ilike(term),
+                    Student.email.ilike(term),
+                    enrollment_match,
+                )
+            )
+            .order_by(Student.name, Student.id)
+            .limit(limit)
+        )
+        result = await session.execute(statement)
+        return result.scalars().all()
 
     async def create(self, session: AsyncSession, payload: StudentCreate) -> Student:
         student = Student(**payload.model_dump())

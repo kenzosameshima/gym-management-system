@@ -25,6 +25,8 @@ from app.schemas.workout import (
     ExerciseUpdate,
     WorkoutPlanCreate,
     WorkoutPlanRead,
+    WorkoutPlanTransfer,
+    WorkoutPlanTransferResult,
     WorkoutPlanUpdate,
 )
 
@@ -122,6 +124,43 @@ class WorkoutPlanService:
             session,
             workout_plan_id,
             WorkoutPlanUpdate(status=WorkoutPlanStatus.INACTIVE),
+        )
+
+    async def transfer_workout_plans(
+        self,
+        session: AsyncSession,
+        payload: WorkoutPlanTransfer,
+    ) -> WorkoutPlanTransferResult:
+        if payload.from_instructor_id == payload.to_instructor_id:
+            raise ApplicationError(
+                code="SAME_INSTRUCTOR_TRANSFER",
+                message="Source and target instructors must be different.",
+                status_code=status.HTTP_409_CONFLICT,
+            )
+        await self._ensure_instructor(session, payload.from_instructor_id)
+        await self._ensure_instructor(session, payload.to_instructor_id)
+
+        try:
+            transferred_count = await self._repository.count_by_instructor(
+                session,
+                instructor_id=payload.from_instructor_id,
+                status=payload.status,
+            )
+            await self._repository.transfer_instructor(
+                session,
+                from_instructor_id=payload.from_instructor_id,
+                to_instructor_id=payload.to_instructor_id,
+                status=payload.status,
+            )
+            await session.commit()
+        except Exception:
+            await session.rollback()
+            raise
+
+        return WorkoutPlanTransferResult(
+            from_instructor_id=payload.from_instructor_id,
+            to_instructor_id=payload.to_instructor_id,
+            transferred_count=transferred_count,
         )
 
     async def _ensure_active_student(self, session: AsyncSession, student_id: int) -> None:

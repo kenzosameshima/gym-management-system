@@ -16,6 +16,12 @@ def require_roles(*allowed_roles: UserRole) -> Callable[[User], User]:
                 message="Insufficient permissions.",
                 status_code=status.HTTP_403_FORBIDDEN,
             )
+        if current_user.must_change_password:
+            raise ApplicationError(
+                code="PASSWORD_CHANGE_REQUIRED",
+                message="Password change is required before accessing this resource.",
+                status_code=status.HTTP_403_FORBIDDEN,
+            )
         return current_user
 
     return dependency

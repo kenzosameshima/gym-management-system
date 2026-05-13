@@ -1,19 +1,23 @@
 # Gym Management System
 
-Stable MVP release candidate for a full-stack gym management platform. The application covers authentication, role-based authorization, students, plans, enrollments, payments, CPF-based access control, workout plans, exercise progress, reports, and a role-aware operational dashboard.
+Stable MVP release candidate for a full-stack gym management platform. The application covers authentication, role-based authorization, staff management, students, plans, enrollments, payments, CPF-based access control, workout plans, exercise progress, reports, and a role-aware operational dashboard.
 
 Current release preparation target: `v1.0.0` (`1.0.0` metadata, unreleased until the final tag).
 
 ## Features
 
 - JWT login/logout flow with protected frontend routes and backend role checks.
+- Initial admin seed for local/demo startup.
+- Admin-only Team screen with staff CRUD, reactivation, password reset, active/inactive filtering, and audit events.
+- Temporary password flow with mandatory first-login password change.
 - Student and plan CRUD with validation, filtering/search, and soft delete.
 - Enrollment creation/listing with inactive student and inactive plan prevention.
 - Payment registration, payment status updates, overdue handling, and duplicate paid-payment protection.
 - CPF access checks with allowed/blocked decisions, denial reasons, and access-log creation.
 - Workout plans, exercises, exercise soft delete, progress recording, and progress history.
+- Active workout plan transfer between instructors before instructor deactivation.
 - Reports for active students, defaulters, most-used plans, revenue, daily access, and workout summary.
-- Dashboard cards and charts that hide restricted metrics by role.
+- Dashboard cards, charts, navigation, and login landing pages that adapt by role.
 - Dockerized PostgreSQL, backend, production frontend, and Vite development frontend.
 
 ## Stack
@@ -93,8 +97,12 @@ Backend variables are documented in `backend/.env.example`:
 - `BACKEND_CORS_ORIGINS`
 - `JWT_ALGORITHM`
 - `ACCESS_TOKEN_EXPIRE_MINUTES`
+- `INITIAL_ADMIN_EMAIL`
+- `INITIAL_ADMIN_FULL_NAME`
+- `INITIAL_ADMIN_PASSWORD`
+- `SEED_DEFAULT_PLANS`
 
-For production-like configuration, use `backend/.env.production.example` as a starting point. Production settings must use `APP_ENV=production`, `DEBUG=false`, a unique `SECRET_KEY`, explicit CORS origins, and real database credentials.
+For production-like configuration, use `backend/.env.production.example` as a starting point. Production settings must use `APP_ENV=production`, `DEBUG=false`, a unique `SECRET_KEY`, explicit CORS origins, and real database credentials. The `INITIAL_ADMIN_*` variables are optional and should only be set during first deployment with a unique temporary password. `SEED_DEFAULT_PLANS=true` creates the default Mensal, Trimestral, Semestral, and Anual plans when they do not already exist.
 
 Frontend variables are documented in `frontend/.env.example`:
 
@@ -159,27 +167,25 @@ The readiness endpoint validates a real async PostgreSQL connection.
 Available authentication endpoints:
 
 ```bash
-POST /api/auth/register
 POST /api/auth/login
 GET /api/auth/me
+POST /api/auth/change-password
 ```
+
+Public registration is disabled. Administrators manage staff accounts through `/api/users` and the frontend Team page.
 
 ### First administrator
 
-The application does not create a default user automatically. After the services are running, create the first administrator explicitly through the registration endpoint:
+On startup, the backend checks whether an active administrator already exists. If no active administrator exists and all `INITIAL_ADMIN_*` variables are configured, it creates the first administrator automatically. If an active administrator already exists, the seed is skipped.
 
-```bash
-curl -X POST http://localhost:8000/api/auth/register \
-  -H "Content-Type: application/json" \
-  -d '{"email":"admin@example.com","full_name":"Admin User","password":"strong-password","role":"ADMIN"}'
-```
-
-Then sign in through the frontend at `http://localhost:3000` with:
+The local Docker configuration uses:
 
 - Email: `admin@example.com`
 - Password: `strong-password`
 
-Use these values only for local development or demos. For shared environments, replace them with a real administrator email and a strong unique password.
+Use these values only for local development or demos. For shared environments, replace them with a real administrator email and a strong unique password before first startup.
+
+There are no default instructor or receptionist accounts. Create them from **Equipe** after logging in as admin. Staff users created by admin receive a temporary password and must change it on first login.
 
 Login API example:
 
@@ -202,13 +208,20 @@ Supported roles:
 - `RECEPTIONIST`
 - `INSTRUCTOR`
 
+Role landing pages:
+
+- `ADMIN`: `/dashboard`
+- `INSTRUCTOR`: `/workouts`
+- `RECEPTIONIST`: `/students`
+
 User responses never expose `password_hash`.
 
 ## API Overview
 
 The backend exposes grouped REST APIs under `/api`:
 
-- `/api/auth`: registration, login, and current user.
+- `/api/auth`: login, current user, and password change.
+- `/api/users`: admin-only staff management, password reset, and user audit logs.
 - `/api/students`: student lifecycle and search.
 - `/api/plans`: plan lifecycle and search.
 - `/api/enrollments`: enrollment creation, cancellation, and filtering.
@@ -262,7 +275,7 @@ DELETE /api/plans/{plan_id}
 Permissions:
 
 - `ADMIN`: full access
-- `RECEPTIONIST`: full access
+- `RECEPTIONIST`: read-only access
 - `INSTRUCTOR`: no access to plan endpoints
 
 Plan rules:
@@ -305,6 +318,41 @@ Access-log listing:
 GET /api/access/logs
 ```
 
+Permissions:
+
+- `ADMIN`: enrollment, payment, access check, and access-log access.
+- `RECEPTIONIST`: enrollment, payment, access check, and access-log access.
+- `INSTRUCTOR`: no access to these operational endpoints.
+
+## Staff And Team Management
+
+Team endpoints:
+
+```bash
+GET /api/users
+POST /api/users
+GET /api/users/audit
+GET /api/users/{user_id}
+PUT /api/users/{user_id}
+DELETE /api/users/{user_id}
+POST /api/users/{user_id}/reset-password
+```
+
+Permissions:
+
+- `ADMIN`: full access.
+- `RECEPTIONIST`: no access.
+- `INSTRUCTOR`: no access.
+
+Team rules:
+
+- Admin-created users are marked with `must_change_password=true`.
+- Temporary-password users must call `POST /api/auth/change-password` before accessing role-protected endpoints.
+- Admin can reset a user's password by defining a new temporary password.
+- Admin cannot deactivate or demote their own account.
+- The last active admin cannot be deactivated or demoted.
+- Staff events are recorded in `user_audit_logs`.
+
 ## Workout Domain
 
 Workout planning endpoints:
@@ -316,6 +364,7 @@ GET /api/workout-plans/{id}
 GET /api/workout-plans/student/{student_id}
 PUT /api/workout-plans/{id}
 DELETE /api/workout-plans/{id}
+POST /api/workout-plans/transfer
 POST /api/workout-plans/{id}/exercises
 GET /api/workout-plans/{id}/exercises
 PUT /api/exercises/{id}
@@ -329,11 +378,12 @@ Permissions:
 
 - `ADMIN`: full access.
 - `INSTRUCTOR`: create and edit workout plans, exercises, and progress records.
-- `RECEPTIONIST`: read-only access.
+- `RECEPTIONIST`: no workout-domain access.
 
 Workout rules:
 
 - Workout plans require an existing active student and an active instructor user.
+- Active workout plans can be transferred between active instructors by administrators.
 - Workout plan and exercise soft deletes set `status` to `INACTIVE`.
 - Exercises cannot be created in inactive workout plans.
 - Exercise progress is historical; every record is appended and never overwrites prior progress.
@@ -382,7 +432,9 @@ Routes:
 
 ```text
 /login
+/change-password
 /dashboard
+/team
 /students
 /plans
 /enrollments
@@ -404,9 +456,9 @@ Authentication flow:
 
 Role-based navigation hides screens that the current user cannot access:
 
-- `ADMIN`: dashboard, students, plans, enrollments, payments, access control, workouts, and reports.
-- `RECEPTIONIST`: dashboard, students, plans, enrollments, payments, access control, reports, and read-only workout views.
-- `INSTRUCTOR`: dashboard, read-only students, workouts, and workout summary reporting.
+- `ADMIN`: dashboard, team, students, plans, enrollments, payments, access control, workouts, and reports.
+- `RECEPTIONIST`: students, plans in read-only mode, enrollments, payments, access control, dashboard, and management reports.
+- `INSTRUCTOR`: workouts, read-only students, dashboard, and workout summary reporting.
 
 Frontend API modules live under `frontend/src/api` and use the shared Axios client plus TypeScript domain types from `frontend/src/types`. The frontend does not bypass backend authorization; hidden navigation is only a usability layer.
 
@@ -420,7 +472,7 @@ Known limitations for this release:
 - No email notifications.
 - No real turnstile/catraca or hardware integration.
 - No mobile app.
-- Student, plan, enrollment, and workout references are entered by ID in this phase.
+- Some remaining relationship fields can still be polished further, but the main operational flows use searchable/selectable context where it matters for the current MVP.
 
 ## Dashboard And Operational UX
 

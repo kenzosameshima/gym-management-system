@@ -1,9 +1,10 @@
 import { httpClient } from "./httpClient";
-import type { AuthUser, LoginRequest, TokenResponse } from "../types/auth";
+import type { AuthUser, ChangePasswordPayload, LoginRequest, TokenResponse } from "../types/auth";
 
 const AUTH_ENDPOINTS = {
   login: "/api/auth/login",
-  me: "/api/auth/me"
+  me: "/api/auth/me",
+  changePassword: "/api/auth/change-password"
 } as const;
 
 export async function login(payload: LoginRequest): Promise<TokenResponse> {
@@ -16,3 +17,7 @@ export async function getCurrentUser(): Promise<AuthUser> {
   return response.data;
 }
 
+export async function changePassword(payload: ChangePasswordPayload): Promise<AuthUser> {
+  const response = await httpClient.post<AuthUser>(AUTH_ENDPOINTS.changePassword, payload);
+  return response.data;
+}

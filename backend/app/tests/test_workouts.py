@@ -306,7 +306,7 @@ async def test_instructor_can_create_and_edit_workout_domain(client: AsyncClient
     assert update_exercise_response.json()["sets"] == 5
 
 
-async def test_receptionist_cannot_create_or_edit_workout_domain(client: AsyncClient) -> None:
+async def test_receptionist_cannot_access_workout_domain(client: AsyncClient) -> None:
     admin_headers = await auth_headers(client)
     instructor_headers, instructor_id = await auth_headers_and_user_id(client, "INSTRUCTOR")
     receptionist_headers = await auth_headers(client, role="RECEPTIONIST")
@@ -335,4 +335,80 @@ async def test_receptionist_cannot_create_or_edit_workout_domain(client: AsyncCl
 
     assert create_response.status_code == 403
     assert update_response.status_code == 403
-    assert read_response.status_code == 200
+    assert read_response.status_code == 403
+
+
+async def test_only_admin_can_list_system_users(client: AsyncClient) -> None:
+    admin_headers = await auth_headers(client)
+    instructor_headers = await auth_headers(client, role="INSTRUCTOR")
+    receptionist_headers = await auth_headers(client, role="RECEPTIONIST")
+
+    admin_response = await client.get("/api/users", headers=admin_headers)
+    instructor_response = await client.get("/api/users", headers=instructor_headers)
+    receptionist_response = await client.get("/api/users", headers=receptionist_headers)
+
+    assert admin_response.status_code == 200
+    assert instructor_response.status_code == 403
+    assert receptionist_response.status_code == 403
+
+
+async def test_admin_can_transfer_active_workout_plans_between_instructors(
+    client: AsyncClient,
+) -> None:
+    admin_headers = await auth_headers(client)
+    _, first_instructor_id = await auth_headers_and_user_id(client, "INSTRUCTOR")
+    second_instructor_response = await client.post(
+        "/api/users",
+        json={
+            "email": "second-instructor@example.com",
+            "full_name": "Second Instructor",
+            "password": "strong-password",
+            "role": "INSTRUCTOR",
+        },
+        headers=admin_headers,
+    )
+    second_instructor_id = second_instructor_response.json()["id"]
+    student_id = await create_student(client, admin_headers)
+    workout_plan_id = await create_workout_plan(
+        client,
+        admin_headers,
+        student_id=student_id,
+        instructor_id=first_instructor_id,
+    )
+
+    transfer_response = await client.post(
+        "/api/workout-plans/transfer",
+        json={
+            "from_instructor_id": first_instructor_id,
+            "to_instructor_id": second_instructor_id,
+            "status": "ACTIVE",
+        },
+        headers=admin_headers,
+    )
+    get_response = await client.get(
+        f"/api/workout-plans/{workout_plan_id}",
+        headers=admin_headers,
+    )
+
+    assert second_instructor_response.status_code == 201
+    assert transfer_response.status_code == 200
+    assert transfer_response.json()["transferred_count"] == 1
+    assert get_response.json()["instructor_id"] == second_instructor_id
+
+
+async def test_block_transfer_to_same_instructor(client: AsyncClient) -> None:
+    admin_headers = await auth_headers(client)
+    _, instructor_id = await auth_headers_and_user_id(client, "INSTRUCTOR")
+
+    response = await client.post(
+        "/api/workout-plans/transfer",
+        json={
+            "from_instructor_id": instructor_id,
+            "to_instructor_id": instructor_id,
+            "status": "ACTIVE",
+        },
+        headers=admin_headers,
+    )
+
+    assert response.status_code == 409
+    assert response.json()["error"]["code"] == "SAME_INSTRUCTOR_TRANSFER"

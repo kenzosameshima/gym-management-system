@@ -1,6 +1,6 @@
 from collections.abc import Sequence
 
-from sqlalchemy import Select, func, or_, select
+from sqlalchemy import Select, func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.enums import WorkoutPlanStatus
@@ -67,6 +67,39 @@ class WorkoutPlanRepository:
         await session.flush()
         await session.refresh(workout_plan)
         return workout_plan
+
+    async def count_by_instructor(
+        self,
+        session: AsyncSession,
+        *,
+        instructor_id: int,
+        status: WorkoutPlanStatus | None = None,
+    ) -> int:
+        statement = select(func.count()).select_from(WorkoutPlan).where(
+            WorkoutPlan.instructor_id == instructor_id
+        )
+        if status is not None:
+            statement = statement.where(WorkoutPlan.status == status)
+        result = await session.execute(statement)
+        return result.scalar_one()
+
+    async def transfer_instructor(
+        self,
+        session: AsyncSession,
+        *,
+        from_instructor_id: int,
+        to_instructor_id: int,
+        status: WorkoutPlanStatus,
+    ) -> None:
+        await session.execute(
+            update(WorkoutPlan)
+            .where(
+                WorkoutPlan.instructor_id == from_instructor_id,
+                WorkoutPlan.status == status,
+            )
+            .values(instructor_id=to_instructor_id)
+        )
+        await session.flush()
 
     def _filtered_statement(
         self,

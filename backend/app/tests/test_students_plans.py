@@ -1,5 +1,10 @@
 from httpx import AsyncClient
 
+from app.database.session import AsyncSessionFactory
+from app.repositories.user_repository import UserRepository
+from app.schemas.user import UserCreate
+from app.services.auth_service import AuthService
+
 
 def student_payload(
     cpf: str = "12345678901",
@@ -29,16 +34,7 @@ def plan_payload(name: str = "Monthly Plan", price: str = "99.90") -> dict[str, 
 async def auth_headers(client: AsyncClient, role: str = "ADMIN") -> dict[str, str]:
     email = f"{role.lower()}@example.com"
     password = "strong-password"
-    register_response = await client.post(
-        "/api/auth/register",
-        json={
-            "email": email,
-            "full_name": f"{role.title()} User",
-            "password": password,
-            "role": role,
-        },
-    )
-    assert register_response.status_code == 201
+    await create_auth_user(email=email, password=password, role=role)
 
     login_response = await client.post(
         "/api/auth/login",
@@ -47,6 +43,28 @@ async def auth_headers(client: AsyncClient, role: str = "ADMIN") -> dict[str, st
     assert login_response.status_code == 200
     token = login_response.json()["access_token"]
     return {"Authorization": f"Bearer {token}"}
+
+
+async def create_auth_user(
+    *,
+    email: str,
+    password: str = "strong-password",
+    role: str = "ADMIN",
+    full_name: str | None = None,
+) -> None:
+    async with AsyncSessionFactory() as session:
+        repository = UserRepository()
+        if await repository.get_by_email(session, email) is not None:
+            return
+        await AuthService(repository).register(
+            session=session,
+            payload=UserCreate(
+                email=email,
+                full_name=full_name or f"{role.title()} User",
+                password=password,
+                role=role,
+            ),
+        )
 
 
 async def test_create_student_authenticated(client: AsyncClient) -> None:
@@ -123,6 +141,54 @@ async def test_list_students_authenticated(client: AsyncClient) -> None:
     assert len(response.json()["items"]) == 1
 
 
+async def test_receptionist_can_manage_students(client: AsyncClient) -> None:
+    headers = await auth_headers(client, role="RECEPTIONIST")
+    create_response = await client.post("/api/students", json=student_payload(), headers=headers)
+    student_id = create_response.json()["id"]
+
+    update_response = await client.put(
+        f"/api/students/{student_id}",
+        json={"phone": "+5511888888888"},
+        headers=headers,
+    )
+    delete_response = await client.delete(f"/api/students/{student_id}", headers=headers)
+
+    assert create_response.status_code == 201
+    assert update_response.status_code == 200
+    assert update_response.json()["phone"] == "+5511888888888"
+    assert delete_response.status_code == 200
+    assert delete_response.json()["status"] == "INACTIVE"
+
+
+async def test_instructor_can_read_but_not_manage_students(client: AsyncClient) -> None:
+    admin_headers = await auth_headers(client)
+    instructor_headers = await auth_headers(client, role="INSTRUCTOR")
+    create_response = await client.post(
+        "/api/students",
+        json=student_payload(),
+        headers=admin_headers,
+    )
+    student_id = create_response.json()["id"]
+
+    list_response = await client.get("/api/students", headers=instructor_headers)
+    get_response = await client.get(f"/api/students/{student_id}", headers=instructor_headers)
+    update_response = await client.put(
+        f"/api/students/{student_id}",
+        json={"phone": "+5511888888888"},
+        headers=instructor_headers,
+    )
+    delete_response = await client.delete(
+        f"/api/students/{student_id}",
+        headers=instructor_headers,
+    )
+
+    assert create_response.status_code == 201
+    assert list_response.status_code == 200
+    assert get_response.status_code == 200
+    assert update_response.status_code == 403
+    assert delete_response.status_code == 403
+
+
 async def test_soft_delete_student(client: AsyncClient) -> None:
     headers = await auth_headers(client)
     create_response = await client.post("/api/students", json=student_payload(), headers=headers)
@@ -191,6 +257,26 @@ async def test_list_plans_authenticated(client: AsyncClient) -> None:
     assert len(response.json()["items"]) == 1
 
 
+async def test_receptionist_can_read_but_not_manage_plans(client: AsyncClient) -> None:
+    admin_headers = await auth_headers(client)
+    receptionist_headers = await auth_headers(client, role="RECEPTIONIST")
+    create_response = await client.post("/api/plans", json=plan_payload(), headers=admin_headers)
+    plan_id = create_response.json()["id"]
+
+    list_response = await client.get("/api/plans", headers=receptionist_headers)
+    update_response = await client.put(
+        f"/api/plans/{plan_id}",
+        json={"price": "120.00"},
+        headers=receptionist_headers,
+    )
+    delete_response = await client.delete(f"/api/plans/{plan_id}", headers=receptionist_headers)
+
+    assert create_response.status_code == 201
+    assert list_response.status_code == 200
+    assert update_response.status_code == 403
+    assert delete_response.status_code == 403
+
+
 async def test_filter_students_by_cpf_email_and_name(client: AsyncClient) -> None:
     headers = await auth_headers(client)
     await client.post("/api/students", json=student_payload(), headers=headers)
@@ -203,6 +289,44 @@ async def test_filter_students_by_cpf_email_and_name(client: AsyncClient) -> Non
     assert cpf_response.json()["total"] == 1
     assert email_response.json()["total"] == 1
     assert name_response.json()["total"] == 1
+
+
+async def test_search_students_by_phone_email_name_cpf_and_enrollment(client: AsyncClient) -> None:
+    headers = await auth_headers(client)
+    student_response = await client.post("/api/students", json=student_payload(), headers=headers)
+    plan_response = await client.post("/api/plans", json=plan_payload(), headers=headers)
+    enrollment_response = await client.post(
+        "/api/enrollments",
+        json={
+            "student_id": student_response.json()["id"],
+            "plan_id": plan_response.json()["id"],
+            "start_date": "2026-05-01",
+            "end_date": "2026-05-31",
+            "status": "ACTIVE",
+        },
+        headers=headers,
+    )
+
+    name_response = await client.get("/api/students/search?q=Student", headers=headers)
+    cpf_response = await client.get("/api/students/search?q=12345678901", headers=headers)
+    phone_response = await client.get("/api/students/search?q=999999999", headers=headers)
+    email_response = await client.get("/api/students/search?q=student@example.com", headers=headers)
+    enrollment_search_response = await client.get(
+        f"/api/students/search?q={enrollment_response.json()['id']}",
+        headers=headers,
+    )
+
+    assert enrollment_response.status_code == 201
+    for response in [
+        name_response,
+        cpf_response,
+        phone_response,
+        email_response,
+        enrollment_search_response,
+    ]:
+        assert response.status_code == 200
+        assert response.json()[0]["name"] == "Student One"
+        assert response.json()[0]["financial_status"] == "IN_GOOD_STANDING"
 
 
 async def test_filter_students_by_status(client: AsyncClient) -> None:
@@ -264,6 +388,8 @@ async def test_instructor_cannot_create_student_or_plan(client: AsyncClient) -> 
 
     student_response = await client.post("/api/students", json=student_payload(), headers=headers)
     plan_response = await client.post("/api/plans", json=plan_payload(), headers=headers)
+    plans_read_response = await client.get("/api/plans", headers=headers)
 
     assert student_response.status_code == 403
     assert plan_response.status_code == 403
+    assert plans_read_response.status_code == 403

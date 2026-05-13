@@ -19,6 +19,7 @@ from app.core.config import get_settings
 from app.core.exceptions import register_exception_handlers
 from app.core.logging import configure_logging
 from app.core.middleware import register_middlewares
+from app.services.bootstrap_service import seed_default_plans, seed_initial_admin
 
 settings = get_settings()
 configure_logging(settings)
@@ -28,6 +29,8 @@ logger = structlog.get_logger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     logger.info("application_startup", app_name=settings.APP_NAME, app_env=settings.APP_ENV)
+    await seed_initial_admin(settings)
+    await seed_default_plans(settings)
     yield
     logger.info("application_shutdown", app_name=settings.APP_NAME, app_env=settings.APP_ENV)
 

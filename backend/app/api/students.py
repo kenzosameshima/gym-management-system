@@ -4,7 +4,7 @@ from app.auth.permissions import require_roles
 from app.core.enums import StudentStatus, UserRole
 from app.database.session import AsyncSessionDependency
 from app.schemas.pagination import Page
-from app.schemas.student import StudentCreate, StudentRead, StudentUpdate
+from app.schemas.student import StudentCreate, StudentRead, StudentSearchResult, StudentUpdate
 from app.services.student_service import StudentService, get_student_service
 
 router = APIRouter(prefix="/api/students", tags=["students"])
@@ -59,6 +59,23 @@ async def list_students(
         name=name,
         status=student_status,
     )
+
+
+@router.get(
+    "/search",
+    response_model=list[StudentSearchResult],
+    status_code=status.HTTP_200_OK,
+    summary="Search students",
+    description="Returns lightweight student suggestions for operational autocomplete.",
+    dependencies=[Depends(require_roles(UserRole.ADMIN, UserRole.RECEPTIONIST))],
+)
+async def search_students(
+    session: AsyncSessionDependency,
+    q: str = Query(min_length=1, max_length=255),
+    limit: int = Query(default=8, gt=0, le=20),
+    service: StudentService = Depends(get_student_service),
+) -> list[StudentSearchResult]:
+    return await service.search_students(session=session, query=q, limit=limit)
 
 
 @router.get(

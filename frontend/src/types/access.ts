@@ -11,6 +11,7 @@ export interface AccessCheckRequest {
 
 export interface AccessDecision {
   student_id: number | null;
+  student_name: string | null;
   cpf_attempted: string;
   allowed: boolean;
   reason: AccessDeniedReason | null;

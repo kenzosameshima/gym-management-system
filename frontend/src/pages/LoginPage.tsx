@@ -1,21 +1,21 @@
 import { FormEvent, useState } from "react";
 import toast from "react-hot-toast";
-import { Navigate, useLocation, useNavigate } from "react-router-dom";
+import { Navigate, useNavigate } from "react-router-dom";
+import { ROLE_HOME_PATH } from "../auth/roleAccess";
 import { ErrorState } from "../components/ErrorState";
 import { useAuth } from "../contexts/AuthContext";
 import { getErrorMessage } from "./pageUtils";
 
 export function LoginPage(): JSX.Element {
-  const { isAuthenticated, login } = useAuth();
+  const { isAuthenticated, login, user } = useAuth();
   const navigate = useNavigate();
-  const location = useLocation();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   if (isAuthenticated) {
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to={user === null ? "/dashboard" : ROLE_HOME_PATH[user.role]} replace />;
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
@@ -23,12 +23,9 @@ export function LoginPage(): JSX.Element {
     setIsSaving(true);
     setError(null);
     try {
-      await login({ email, password });
-      const redirectTo = typeof location.state === "object" && location.state !== null && "from" in location.state
-        ? "/dashboard"
-        : "/dashboard";
+      const currentUser = await login({ email, password });
       toast.success("Entrada realizada.");
-      navigate(redirectTo, { replace: true });
+      navigate(ROLE_HOME_PATH[currentUser.role], { replace: true });
     } catch (submitError) {
       toast.error("Nao foi possivel entrar.");
       setError(getErrorMessage(submitError));

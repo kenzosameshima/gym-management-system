@@ -151,6 +151,7 @@ async def test_access_allowed_with_active_enrollment_and_no_overdue_payments(
     assert response.status_code == 200
     assert response.json() == {
         "student_id": student_id,
+        "student_name": "Student One",
         "cpf_attempted": "12345678901",
         "allowed": True,
         "reason": None,
@@ -228,6 +229,7 @@ async def test_access_denied_for_missing_student_generates_log(client: AsyncClie
     assert response.status_code == 200
     assert response.json() == {
         "student_id": None,
+        "student_name": None,
         "cpf_attempted": "00000000000",
         "allowed": False,
         "reason": AccessDeniedReason.STUDENT_NOT_FOUND,

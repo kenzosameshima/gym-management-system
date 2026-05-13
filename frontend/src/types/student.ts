@@ -20,6 +20,11 @@ export interface Student {
   updated_at: string;
 }
 
+export type StudentSearchResult = Pick<
+  Student,
+  "id" | "name" | "cpf" | "phone" | "email" | "status" | "financial_status"
+>;
+
 export interface StudentPayload {
   name: string;
   cpf: string;

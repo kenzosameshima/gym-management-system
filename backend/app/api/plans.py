@@ -10,7 +10,8 @@ from app.services.plan_service import PlanService, get_plan_service
 
 router = APIRouter(prefix="/api/plans", tags=["plans"])
 
-PLAN_MANAGEMENT_ROLES = (UserRole.ADMIN, UserRole.RECEPTIONIST)
+PLAN_READ_ROLES = (UserRole.ADMIN, UserRole.RECEPTIONIST)
+PLAN_WRITE_ROLES = (UserRole.ADMIN,)
 
 
 @router.post(
@@ -19,7 +20,7 @@ PLAN_MANAGEMENT_ROLES = (UserRole.ADMIN, UserRole.RECEPTIONIST)
     status_code=status.HTTP_201_CREATED,
     summary="Create plan",
     description="Creates a gym plan after validating unique plan name.",
-    dependencies=[Depends(require_roles(*PLAN_MANAGEMENT_ROLES))],
+    dependencies=[Depends(require_roles(*PLAN_WRITE_ROLES))],
 )
 async def create_plan(
     payload: PlanCreate,
@@ -35,7 +36,7 @@ async def create_plan(
     status_code=status.HTTP_200_OK,
     summary="List plans",
     description="Returns a paginated plan list with optional name filtering.",
-    dependencies=[Depends(require_roles(*PLAN_MANAGEMENT_ROLES))],
+    dependencies=[Depends(require_roles(*PLAN_READ_ROLES))],
 )
 async def list_plans(
     session: AsyncSessionDependency,
@@ -60,7 +61,7 @@ async def list_plans(
     status_code=status.HTTP_200_OK,
     summary="Get plan",
     description="Returns one plan by id.",
-    dependencies=[Depends(require_roles(*PLAN_MANAGEMENT_ROLES))],
+    dependencies=[Depends(require_roles(*PLAN_READ_ROLES))],
 )
 async def get_plan(
     plan_id: int,
@@ -76,7 +77,7 @@ async def get_plan(
     status_code=status.HTTP_200_OK,
     summary="Update plan",
     description="Updates plan data after validating unique plan name.",
-    dependencies=[Depends(require_roles(*PLAN_MANAGEMENT_ROLES))],
+    dependencies=[Depends(require_roles(*PLAN_WRITE_ROLES))],
 )
 async def update_plan(
     plan_id: int,
@@ -93,7 +94,7 @@ async def update_plan(
     status_code=status.HTTP_200_OK,
     summary="Deactivate plan",
     description="Soft deletes a plan by changing status to INACTIVE.",
-    dependencies=[Depends(require_roles(*PLAN_MANAGEMENT_ROLES))],
+    dependencies=[Depends(require_roles(*PLAN_WRITE_ROLES))],
 )
 async def delete_plan(
     plan_id: int,

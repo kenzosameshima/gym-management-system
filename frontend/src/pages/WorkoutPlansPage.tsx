@@ -23,7 +23,7 @@ import type { AuthUser } from "../types/auth";
 import type { Page } from "../types/common";
 import type { Student } from "../types/student";
 import type { Exercise, ExercisePayload, ExerciseProgress, WorkoutPlan, WorkoutPlanPayload } from "../types/workout";
-import { formatDateTime, getErrorMessage, STATUS_OPTIONS } from "./pageUtils";
+import { formatDateTime, formatFinancialStatus, getErrorMessage, STATUS_OPTIONS } from "./pageUtils";
 
 const EMPTY_PLAN: WorkoutPlanPayload = { student_id: 0, instructor_id: 0, goal: "", notes: "", status: "ACTIVE" };
 const EMPTY_EXERCISE: ExercisePayload = { name: "", muscle_group: "", sets: 3, repetitions: 10, load: "", notes: "", status: "ACTIVE" };
@@ -72,10 +72,10 @@ export function WorkoutPlansPage(): JSX.Element {
     try {
       const [studentPage, instructorPage] = await Promise.all([
         getStudents({ limit: 100, status: "ACTIVE" }),
-        getUsers({ limit: 100, role: "INSTRUCTOR" })
+        user?.role === "ADMIN" ? getUsers({ limit: 100, role: "INSTRUCTOR" }) : Promise.resolve(null)
       ]);
       setStudents(studentPage.items);
-      setInstructors(instructorPage.items);
+      setInstructors(instructorPage?.items ?? (user?.role === "INSTRUCTOR" ? [user] : []));
     } catch (loadError) {
       setError(getErrorMessage(loadError));
     } finally {
@@ -89,11 +89,11 @@ export function WorkoutPlansPage(): JSX.Element {
   }, []);
 
   function studentLabel(studentId: number): string {
-    return students.find((student) => student.id === studentId)?.name ?? `Aluno #${studentId}`;
+    return students.find((student) => student.id === studentId)?.name ?? "Aluno não encontrado";
   }
 
   function instructorLabel(instructorId: number): string {
-    return instructors.find((instructor) => instructor.id === instructorId)?.full_name ?? `Instrutor #${instructorId}`;
+    return instructors.find((instructor) => instructor.id === instructorId)?.full_name ?? "Instrutor não encontrado";
   }
 
   async function selectPlan(plan: WorkoutPlan): Promise<void> {
@@ -179,11 +179,10 @@ export function WorkoutPlansPage(): JSX.Element {
   }
 
   const planColumns: Column<WorkoutPlan>[] = [
-    { key: "id", header: "ID", render: (plan) => plan.id, sortValue: (plan) => plan.id },
     { key: "student", header: "Aluno", render: (plan) => studentLabel(plan.student_id) },
     { key: "instructor", header: "Instrutor", render: (plan) => instructorLabel(plan.instructor_id) },
     { key: "goal", header: "Objetivo", render: (plan) => plan.goal, sortValue: (plan) => plan.goal },
-    { key: "status", header: "Status", render: (plan) => plan.status, sortValue: (plan) => plan.status },
+    { key: "status", header: "Status", render: (plan) => formatFinancialStatus(plan.status), sortValue: (plan) => plan.status },
     {
       key: "actions",
       header: "Acoes",
@@ -198,12 +197,12 @@ export function WorkoutPlansPage(): JSX.Element {
   ];
 
   const exerciseColumns: Column<Exercise>[] = [
-    { key: "name", header: "Exercicio", render: (exercise) => exercise.name },
-    { key: "group", header: "Grupo", render: (exercise) => exercise.muscle_group },
-    { key: "sets", header: "Series", render: (exercise) => exercise.sets },
-    { key: "reps", header: "Reps", render: (exercise) => exercise.repetitions },
-    { key: "load", header: "Carga", render: (exercise) => exercise.load ?? "-" },
-    { key: "status", header: "Status", render: (exercise) => exercise.status },
+    { key: "muscles", header: "Músculos", render: (exercise) => exercise.muscle_group },
+    { key: "name", header: "Exercício", render: (exercise) => exercise.name },
+    { key: "sets", header: "Séries", render: (exercise) => exercise.sets },
+    { key: "reps", header: "Repetições", render: (exercise) => exercise.repetitions },
+    { key: "load", header: "Carga (kg)", render: (exercise) => exercise.load ?? "-" },
+    { key: "notes", header: "Observações", render: (exercise) => exercise.notes ?? "-" },
     {
       key: "actions",
       header: "Acoes",
@@ -224,10 +223,10 @@ export function WorkoutPlansPage(): JSX.Element {
       {error !== null && <ErrorState message={error} />}
       <form className="toolbar" onSubmit={(event) => { event.preventDefault(); void loadPlans(0); }}>
         <label>Aluno<input placeholder="Nome, CPF ou e-mail" value={studentSearch} onChange={(event) => setStudentSearch(event.target.value)} /></label>
-        <label>Instrutor<input placeholder="Nome ou e-mail" value={instructorSearch} onChange={(event) => setInstructorSearch(event.target.value)} /></label>
+        <label>Instrutor<input placeholder="Nome do instrutor" value={instructorSearch} onChange={(event) => setInstructorSearch(event.target.value)} /></label>
         <label>Status<select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as "" | WorkoutPlanPayload["status"])}>
-          <option value="">All</option>
-          {STATUS_OPTIONS.map((status) => <option key={status}>{status}</option>)}
+          <option value="">Todos</option>
+          {STATUS_OPTIONS.map((status) => <option key={status} value={status}>{formatFinancialStatus(status)}</option>)}
         </select></label>
         <button type="submit">Filtrar</button>
       </form>
@@ -236,54 +235,55 @@ export function WorkoutPlansPage(): JSX.Element {
           <label>Aluno
             <select value={planForm.student_id || ""} onChange={(event) => setPlanForm({ ...planForm, student_id: Number(event.target.value) })} required disabled={isLoadingOptions || students.length === 0}>
               <option value="">{isLoadingOptions ? "Carregando alunos..." : "Selecionar aluno"}</option>
-              {students.map((student) => <option key={student.id} value={student.id}>{student.name} - {student.email}</option>)}
+              {students.map((student) => <option key={student.id} value={student.id}>{student.name}</option>)}
             </select>
           </label>
           <label>Instrutor
             <select value={user?.role === "INSTRUCTOR" ? user.id : planForm.instructor_id || ""} onChange={(event) => setPlanForm({ ...planForm, instructor_id: Number(event.target.value) })} required disabled={user?.role === "INSTRUCTOR" || isLoadingOptions || instructors.length === 0}>
               <option value="">{isLoadingOptions ? "Carregando instrutores..." : "Selecionar instrutor"}</option>
               {(user?.role === "INSTRUCTOR" && !instructors.some((instructor) => instructor.id === user.id) ? [user, ...instructors] : instructors).map((instructor) => (
-                <option key={instructor.id} value={instructor.id}>{instructor.full_name} - {instructor.email}</option>
+                <option key={instructor.id} value={instructor.id}>{instructor.full_name}</option>
               ))}
             </select>
           </label>
           <label>Objetivo<input placeholder="Objetivo" value={planForm.goal} onChange={(event) => setPlanForm({ ...planForm, goal: event.target.value })} required /></label>
           <label>Observacoes<input placeholder="Observacoes" value={planForm.notes ?? ""} onChange={(event) => setPlanForm({ ...planForm, notes: event.target.value })} /></label>
-          <label>Status<select value={planForm.status} onChange={(event) => setPlanForm({ ...planForm, status: event.target.value as WorkoutPlanPayload["status"] })}>{STATUS_OPTIONS.map((status) => <option key={status}>{status}</option>)}</select></label>
+          <label>Status<select value={planForm.status} onChange={(event) => setPlanForm({ ...planForm, status: event.target.value as WorkoutPlanPayload["status"] })}>{STATUS_OPTIONS.map((status) => <option key={status} value={status}>{formatFinancialStatus(status)}</option>)}</select></label>
           <button type="submit" disabled={isSaving}>{isSaving ? "Salvando..." : editingPlanId === null ? "Criar ficha" : "Atualizar ficha"}</button>
         </form>
       )}
       {page === null ? <LoadingState /> : <DataTable columns={planColumns} rows={sortedPlans.rows} getRowKey={(plan) => plan.id} emptyMessage="Nenhuma ficha encontrada." isLoading={isLoading} total={page.total} limit={page.limit} offset={page.offset} onPageChange={(nextOffset) => void loadPlans(nextOffset)} sortKey={sortedPlans.sortKey} sortDirection={sortedPlans.sortDirection} onSortChange={sortedPlans.setSortKey} />}
       {selectedPlan !== null && (
         <section className="page-stack">
-          <h2>Ficha de {studentLabel(selectedPlan.student_id)}</h2>
+          <header className="workout-sheet-header">
+            <div>
+              <p className="eyebrow">Ficha de treino</p>
+              <h2>{studentLabel(selectedPlan.student_id)}</h2>
+            </div>
+            <div className="workout-sheet-meta">
+              <span>{selectedPlan.goal}</span>
+              <span>{instructorLabel(selectedPlan.instructor_id)}</span>
+            </div>
+          </header>
           {canWrite && (
             <form className="panel form-grid" onSubmit={handleExerciseSubmit}>
-              <label>Exercicio<input placeholder="Exercicio" value={exerciseForm.name} onChange={(event) => setExerciseForm({ ...exerciseForm, name: event.target.value })} required /></label>
-              <label>Grupo muscular<input placeholder="Grupo muscular" value={exerciseForm.muscle_group} onChange={(event) => setExerciseForm({ ...exerciseForm, muscle_group: event.target.value })} required /></label>
-              <label>Series<input type="number" min="1" value={exerciseForm.sets} onChange={(event) => setExerciseForm({ ...exerciseForm, sets: Number(event.target.value) })} required /></label>
-              <label>Repeticoes<input type="number" min="1" value={exerciseForm.repetitions} onChange={(event) => setExerciseForm({ ...exerciseForm, repetitions: Number(event.target.value) })} required /></label>
-              <label>Carga<input placeholder="Carga" value={exerciseForm.load ?? ""} onChange={(event) => setExerciseForm({ ...exerciseForm, load: event.target.value })} /></label>
+              <label>Músculos<input placeholder="Ex.: Peitoral, tríceps" value={exerciseForm.muscle_group} onChange={(event) => setExerciseForm({ ...exerciseForm, muscle_group: event.target.value })} required /></label>
+              <label>Exercício<input placeholder="Nome do exercício" value={exerciseForm.name} onChange={(event) => setExerciseForm({ ...exerciseForm, name: event.target.value })} required /></label>
+              <label>Séries<input type="number" min="1" value={exerciseForm.sets} onChange={(event) => setExerciseForm({ ...exerciseForm, sets: Number(event.target.value) })} required /></label>
+              <label>Repetições<input type="number" min="1" value={exerciseForm.repetitions} onChange={(event) => setExerciseForm({ ...exerciseForm, repetitions: Number(event.target.value) })} required /></label>
+              <label>Carga (kg)<input placeholder="Carga em kg" value={exerciseForm.load ?? ""} onChange={(event) => setExerciseForm({ ...exerciseForm, load: event.target.value })} /></label>
               <label>Observacoes<input placeholder="Observacoes" value={exerciseForm.notes ?? ""} onChange={(event) => setExerciseForm({ ...exerciseForm, notes: event.target.value })} /></label>
-              <label>Status<select value={exerciseForm.status} onChange={(event) => setExerciseForm({ ...exerciseForm, status: event.target.value as ExercisePayload["status"] })}>{STATUS_OPTIONS.map((status) => <option key={status}>{status}</option>)}</select></label>
+              <label>Status<select value={exerciseForm.status} onChange={(event) => setExerciseForm({ ...exerciseForm, status: event.target.value as ExercisePayload["status"] })}>{STATUS_OPTIONS.map((status) => <option key={status} value={status}>{formatFinancialStatus(status)}</option>)}</select></label>
               <button type="submit" disabled={isSaving}>{editingExerciseId === null ? "Adicionar exercicio" : "Atualizar exercicio"}</button>
             </form>
           )}
-          <DataTable columns={exerciseColumns} rows={exercises} getRowKey={(exercise) => exercise.id} emptyMessage="Nenhum exercicio encontrado." />
-          <div className="exercise-groups">
-            {exercises.map((exercise) => (
-              <details key={exercise.id} className="panel" open={exercise.id === selectedExerciseId}>
-                <summary>{exercise.name} - {exercise.muscle_group} - {exercise.sets}x{exercise.repetitions}</summary>
-                <p>Status: {exercise.status}</p>
-                <p>Carga: {exercise.load ?? "-"}</p>
-                <p>{exercise.notes ?? "Sem observacoes."}</p>
-              </details>
-            ))}
+          <div className="workout-sheet-table">
+            <DataTable columns={exerciseColumns} rows={exercises} getRowKey={(exercise) => exercise.id} emptyMessage="Nenhum exercício cadastrado nesta ficha." />
           </div>
           {canWrite && selectedExerciseId !== null && (
             <form className="panel form-grid" onSubmit={handleProgressSubmit}>
-              <label>Carga<input name="load" placeholder="Carga" /></label>
-              <label>Repeticoes<input name="repetitions" type="number" min="1" placeholder="Repeticoes" required /></label>
+              <label>Carga (kg)<input name="load" placeholder="Carga em kg" /></label>
+              <label>Repetições<input name="repetitions" type="number" min="1" placeholder="Repetições" required /></label>
               <label>Observacoes<input name="notes" placeholder="Observacoes" /></label>
               <button type="submit" disabled={isSaving}>Registrar evolucao</button>
             </form>
@@ -291,8 +291,8 @@ export function WorkoutPlansPage(): JSX.Element {
           <DataTable
             columns={[
               { key: "date", header: "Registrado em", render: (item) => formatDateTime(item.recorded_at) },
-              { key: "load", header: "Carga", render: (item) => item.load ?? "-" },
-              { key: "reps", header: "Reps", render: (item) => item.repetitions },
+              { key: "load", header: "Carga (kg)", render: (item) => item.load ?? "-" },
+              { key: "reps", header: "Repetições", render: (item) => item.repetitions },
               { key: "notes", header: "Observacoes", render: (item) => item.notes ?? "-" }
             ]}
             rows={progress}

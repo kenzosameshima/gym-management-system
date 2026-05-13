@@ -1,3 +1,5 @@
+from datetime import UTC, datetime
+
 from fastapi import Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -42,6 +44,8 @@ class AuthService:
         if not verify_password(payload.password, user.password_hash):
             raise self._invalid_credentials_error()
 
+        await self._repository.update(session, user, {"last_login_at": datetime.now(UTC)})
+        await session.commit()
         return TokenResponse(access_token=create_access_token(subject=str(user.id)))
 
     @staticmethod

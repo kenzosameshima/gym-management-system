@@ -13,7 +13,7 @@ import type { Enrollment } from "../types/enrollment";
 import type { Payment, PaymentCreatePayload } from "../types/payment";
 import type { Plan } from "../types/plan";
 import type { Student } from "../types/student";
-import { formatCurrency, formatDate, getErrorMessage } from "./pageUtils";
+import { formatCurrency, formatDate, formatFinancialStatus, getErrorMessage } from "./pageUtils";
 
 const PAYMENT_STATUSES = ["PENDING", "PAID", "OVERDUE"] as const;
 const EMPTY_FORM: PaymentCreatePayload = { enrollment_id: 0, amount: "", due_date: "", status: "PENDING" };
@@ -77,11 +77,11 @@ export function PaymentsPage(): JSX.Element {
   function enrollmentLabel(enrollmentId: number): string {
     const enrollment = enrollments.find((item) => item.id === enrollmentId);
     if (enrollment === undefined) {
-      return `Matricula #${enrollmentId}`;
+      return "Matrícula não encontrada";
     }
     const student = students.find((item) => item.id === enrollment.student_id);
     const plan = plans.find((item) => item.id === enrollment.plan_id);
-    return `${student?.name ?? `Aluno #${enrollment.student_id}`} - ${plan?.name ?? `Plano #${enrollment.plan_id}`} (${enrollment.status}, ${formatDate(enrollment.start_date)})`;
+    return `${student?.name ?? "Aluno não encontrado"} - ${plan?.name ?? "Plano não encontrado"} (${formatDate(enrollment.start_date)})`;
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
@@ -101,12 +101,11 @@ export function PaymentsPage(): JSX.Element {
   }
 
   const columns: Column<Payment>[] = [
-    { key: "id", header: "ID", render: (payment) => payment.id, sortValue: (payment) => payment.id },
     { key: "enrollment", header: "Matricula", render: (payment) => enrollmentLabel(payment.enrollment_id) },
     { key: "amount", header: "Valor", render: (payment) => formatCurrency(payment.amount), sortValue: (payment) => Number(payment.amount) },
     { key: "due", header: "Vencimento", render: (payment) => formatDate(payment.due_date) },
     { key: "paid", header: "Pago em", render: (payment) => formatDate(payment.payment_date) },
-    { key: "status", header: "Status", render: (payment) => payment.status },
+    { key: "status", header: "Status", render: (payment) => formatFinancialStatus(payment.status) },
     {
       key: "actions",
       header: "Acoes",
@@ -132,7 +131,7 @@ export function PaymentsPage(): JSX.Element {
         <label>Buscar aluno<input placeholder="Nome, CPF ou e-mail" value={studentSearch} onChange={(event) => setStudentSearch(event.target.value)} /></label>
         <label>Status<select value={statusFilter} disabled={overdueOnly} onChange={(event) => setStatusFilter(event.target.value)}>
           <option value="">Todos</option>
-          {PAYMENT_STATUSES.map((status) => <option key={status}>{status}</option>)}
+          {PAYMENT_STATUSES.map((status) => <option key={status} value={status}>{formatFinancialStatus(status)}</option>)}
         </select></label>
         <label className="inline-check"><input type="checkbox" checked={overdueOnly} onChange={(event) => setOverdueOnly(event.target.checked)} /> Apenas vencidos</label>
         <button type="submit">Filtrar</button>
@@ -148,7 +147,7 @@ export function PaymentsPage(): JSX.Element {
         <label>Vencimento<input type="date" value={form.due_date} onChange={(event) => setForm({ ...form, due_date: event.target.value })} required /></label>
         <label>Status
           <select value={form.status} onChange={(event) => setForm({ ...form, status: event.target.value as PaymentCreatePayload["status"] })}>
-            {PAYMENT_STATUSES.map((status) => <option key={status}>{status}</option>)}
+            {PAYMENT_STATUSES.map((status) => <option key={status} value={status}>{formatFinancialStatus(status)}</option>)}
           </select>
         </label>
         <button type="submit" disabled={isSaving}>{isSaving ? "Salvando..." : "Registrar mensalidade"}</button>

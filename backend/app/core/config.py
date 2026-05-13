@@ -1,7 +1,7 @@
 from enum import StrEnum
 from functools import lru_cache
 
-from pydantic import Field, PostgresDsn, model_validator
+from pydantic import EmailStr, Field, PostgresDsn, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -31,6 +31,10 @@ class Settings(BaseSettings):
     DATABASE_POOL_TIMEOUT: int = Field(default=30, ge=1)
     JWT_ALGORITHM: str = Field(default="HS256", min_length=1)
     ACCESS_TOKEN_EXPIRE_MINUTES: int = Field(default=30, ge=1)
+    INITIAL_ADMIN_EMAIL: EmailStr | None = None
+    INITIAL_ADMIN_FULL_NAME: str | None = Field(default=None, min_length=1, max_length=255)
+    INITIAL_ADMIN_PASSWORD: str | None = Field(default=None, min_length=8, max_length=128)
+    SEED_DEFAULT_PLANS: bool = False
 
     @model_validator(mode="after")
     def validate_production_settings(self) -> "Settings":
@@ -41,6 +45,17 @@ class Settings(BaseSettings):
                 raise ValueError("Wildcard CORS origins are not allowed in production.")
             if self.SECRET_KEY == "local-development-secret-key-change-before-production":
                 raise ValueError("SECRET_KEY must be changed in production.")
+            if self.INITIAL_ADMIN_PASSWORD == "strong-password":
+                raise ValueError("INITIAL_ADMIN_PASSWORD must be unique in production.")
+        initial_admin_values = [
+            self.INITIAL_ADMIN_EMAIL,
+            self.INITIAL_ADMIN_FULL_NAME,
+            self.INITIAL_ADMIN_PASSWORD,
+        ]
+        if any(value is not None for value in initial_admin_values) and not all(
+            value is not None for value in initial_admin_values
+        ):
+            raise ValueError("All INITIAL_ADMIN_* settings must be provided together.")
         return self
 
     @property

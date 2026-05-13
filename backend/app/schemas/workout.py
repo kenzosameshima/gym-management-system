@@ -22,6 +22,18 @@ class WorkoutPlanUpdate(BaseModel):
     status: WorkoutPlanStatus | None = None
 
 
+class WorkoutPlanTransfer(BaseModel):
+    from_instructor_id: int = Field(gt=0)
+    to_instructor_id: int = Field(gt=0)
+    status: WorkoutPlanStatus = WorkoutPlanStatus.ACTIVE
+
+
+class WorkoutPlanTransferResult(BaseModel):
+    from_instructor_id: int
+    to_instructor_id: int
+    transferred_count: int
+
+
 class WorkoutPlanRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

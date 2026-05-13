@@ -2,65 +2,81 @@
 
 ## 1. System Overview
 
-Gym Management System is a web application for replacing paper and spreadsheet controls in a gym. It supports administrative operations, access control, workout sheets, payments, reports, and a dashboard.
+Gym Management System is a full-stack web application for gym operations. It replaces spreadsheet and paper workflows with authenticated staff access, role-based screens, student management, memberships, payments, check-in by CPF, workout sheets, reports, and a dashboard.
 
-## 2. User Profiles
+## 2. Default Demo Login
 
-- Admin: full system access.
-- Receptionist: students, plans, enrollments, payments, access control, reports, and read-only workout data.
-- Instructor: students in read-only mode, workout plans, exercises, exercise progress, and workout reports.
+Local Docker startup creates the first admin when no active admin exists.
 
-## 3. Demonstration Script
+- Email: `admin@example.com`
+- Password: `strong-password`
 
-1. Open the application at `http://localhost:3000`.
-2. Sign in with an admin user.
-3. Create a plan in `Plans`.
-4. Create a student in `Students`, including phone and address.
-5. Confirm the student's cadastral status and financial status in the table.
-6. Create an enrollment in `Enrollments` by selecting the student and plan by name.
-7. Confirm the enrollment payment status in the enrollment table.
-8. Open `Payments` and confirm the generated pending payment.
-9. Mark the payment as paid.
-10. Open `Access Control` and check access by CPF.
-11. Create an instructor user through the API or use an existing instructor.
-12. Open `Workouts`, create a workout plan for the student, and add exercises with sets, repetitions, load, and notes.
-13. Record exercise progress.
-14. Open `Reports` and show active students, defaulters, most-used plans, revenue, daily access, and workout summary.
-15. Open `Dashboard` and show active students, defaulters, expected revenue, access frequency, plan usage, and workout indicators.
+These credentials are development/demo placeholders only.
 
-## 4. Main Screens
+## 3. User Profiles
+
+- Admin: lands on the dashboard and manages the whole system, including staff and plans.
+- Receptionist: lands on students and handles front-desk operations.
+- Instructor: lands on workouts and handles training workflows.
+
+## 4. Demonstration Script
+
+1. Open `http://localhost:3000`.
+2. Sign in with `admin@example.com` / `strong-password`.
+3. Show the role-aware dashboard.
+4. Open **Equipe** and create a receptionist or instructor with a temporary password.
+5. Log out and sign in with the created user to show mandatory password change.
+6. Return as admin and show password reset and recent audit events.
+7. Open **Planos** and show default plans seeded locally: Mensal, Trimestral, Semestral, Anual.
+8. Create or review a student in **Alunos**.
+9. Create an enrollment in **Matrículas**.
+10. Confirm the generated pending payment in **Pagamentos**.
+11. Mark the payment as paid.
+12. Use **Check-in** to validate access by CPF.
+13. Create a workout plan in **Treinos** and add exercises.
+14. Record exercise progress.
+15. Show **Relatórios** and explain that reports are role-aware.
+
+## 5. Main Screens
 
 - Login
+- Mandatory password change
 - Dashboard
-- Students
-- Plans
-- Enrollments
-- Payments
-- Access Control
-- Workouts
-- Reports
+- Equipe
+- Alunos
+- Planos
+- Matrículas
+- Pagamentos
+- Check-in
+- Treinos
+- Relatórios
 
-## 5. Requirement Coverage
+## 6. Requirement Coverage
 
+- Authentication and role authorization: implemented.
+- Initial admin seed: implemented.
+- Staff CRUD and audit: implemented.
+- Temporary password and reset flow: implemented.
 - Student registration: implemented.
-- Plan management: implemented.
+- Plan management and optional default seed: implemented.
 - Student enrollment: implemented.
 - Payment tracking and delinquency: implemented as derived financial status.
 - Access control: implemented through CPF checks and access logs.
-- Workout sheet: implemented through workout plans and exercises.
-- Basic reports: implemented.
-- Dashboard indicators: implemented.
+- Workout sheet: implemented through workout plans, exercises, and progress.
+- Workout transfer between instructors: implemented.
+- Reports and dashboard indicators: implemented.
 
-## 6. Technical Summary
+## 7. Technical Summary
 
 - Frontend: React, TypeScript, Vite, Axios.
 - Backend: FastAPI, SQLAlchemy async, Pydantic, Alembic.
 - Database: PostgreSQL.
 - Infrastructure: Docker Compose.
 - Authentication: JWT bearer tokens.
-- Authorization: role-based backend dependencies.
+- Authorization: backend role dependencies.
+- Quality: Pytest, Ruff, MyPy, TypeScript build checks.
 
-## 7. Validation Commands
+## 8. Validation Commands
 
 ```bash
 docker compose run --rm backend pytest
@@ -72,10 +88,10 @@ docker compose up --build -d
 docker compose ps
 ```
 
-## 8. Known Limitations
+## 9. Known Limitations
 
 - Payment gateway integration is not included.
-- Email notifications are not included.
+- Email-based password reset links are not included; admin sets temporary passwords manually.
 - Real turnstile or hardware integration is not included.
 - Advanced exports such as PDF and CSV are not included.
-- Physical evolution charts can be expanded from exercise progress history in a future iteration.
+- Refresh tokens are not included; expired JWT sessions require login again.

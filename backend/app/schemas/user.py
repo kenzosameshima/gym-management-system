@@ -12,6 +12,23 @@ class UserCreate(BaseModel):
     role: UserRole = UserRole.RECEPTIONIST
 
 
+class UserUpdate(BaseModel):
+    email: EmailStr | None = None
+    full_name: str | None = Field(default=None, min_length=1, max_length=255)
+    password: str | None = Field(default=None, min_length=8, max_length=128)
+    role: UserRole | None = None
+    is_active: bool | None = None
+
+
+class UserPasswordReset(BaseModel):
+    temporary_password: str = Field(min_length=8, max_length=128)
+
+
+class UserPasswordChange(BaseModel):
+    current_password: str = Field(min_length=8, max_length=128)
+    new_password: str = Field(min_length=8, max_length=128)
+
+
 class UserRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -20,5 +37,18 @@ class UserRead(BaseModel):
     full_name: str
     role: UserRole
     is_active: bool
+    must_change_password: bool
+    last_login_at: datetime | None
     created_at: datetime
     updated_at: datetime
+
+
+class UserAuditLogRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    actor_user_id: int | None
+    target_user_id: int | None
+    action: str
+    details: str | None
+    created_at: datetime

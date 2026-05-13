@@ -108,7 +108,7 @@ export function StudentsPage(): JSX.Element {
     { key: "cpf", header: "CPF", render: (student) => student.cpf, sortValue: (student) => student.cpf },
     { key: "email", header: "E-mail", render: (student) => student.email, sortValue: (student) => student.email },
     { key: "birth_date", header: "Nascimento", render: (student) => formatDate(student.birth_date) },
-    { key: "status", header: "Status", render: (student) => student.status },
+    { key: "status", header: "Status", render: (student) => formatFinancialStatus(student.status) },
     { key: "financial", header: "Situacao financeira", render: (student) => formatFinancialStatus(student.financial_status) },
     {
       key: "actions",
@@ -142,7 +142,7 @@ export function StudentsPage(): JSX.Element {
         <label>E-mail<input placeholder="E-mail" value={emailSearch} onChange={(event) => setEmailSearch(event.target.value)} /></label>
         <label>Status<select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as "" | StudentPayload["status"])}>
           <option value="">Todos</option>
-          {STATUS_OPTIONS.map((status) => <option key={status}>{status}</option>)}
+          {STATUS_OPTIONS.map((status) => <option key={status} value={status}>{formatFinancialStatus(status)}</option>)}
         </select></label>
         <button type="submit">Buscar</button>
       </form>
@@ -156,7 +156,7 @@ export function StudentsPage(): JSX.Element {
           <label>Endereco<input placeholder="Endereco" value={form.address} onChange={(event) => setForm({ ...form, address: event.target.value })} required /></label>
           <label>Status
             <select value={form.status} onChange={(event) => setForm({ ...form, status: event.target.value as StudentPayload["status"] })}>
-              {STATUS_OPTIONS.map((status) => <option key={status}>{status}</option>)}
+              {STATUS_OPTIONS.map((status) => <option key={status} value={status}>{formatFinancialStatus(status)}</option>)}
             </select>
           </label>
           <button type="submit" disabled={isSaving}>{isSaving ? "Salvando..." : editingId === null ? "Cadastrar aluno" : "Atualizar aluno"}</button>

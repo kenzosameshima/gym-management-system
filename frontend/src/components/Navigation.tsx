@@ -1,4 +1,5 @@
 import { NavLink } from "react-router-dom";
+import { ADMIN_ROLES, ALL_STAFF_ROLES, OPERATIONS_ROLES, WORKOUT_ROLES } from "../auth/roleAccess";
 import { useAuth } from "../contexts/AuthContext";
 import type { Role } from "../types/common";
 
@@ -26,22 +27,27 @@ const NAV_SECTIONS: NavSection[] = [
       {
         to: "/access-control",
         label: "Check-in",
-        roles: ["ADMIN", "RECEPTIONIST"]
+        roles: OPERATIONS_ROLES
       },
       {
         to: "/students",
         label: "Alunos",
-        roles: ["ADMIN", "RECEPTIONIST", "INSTRUCTOR"]
+        roles: ALL_STAFF_ROLES
       },
       {
         to: "/payments",
         label: "Pagamentos",
-        roles: ["ADMIN", "RECEPTIONIST"]
+        roles: OPERATIONS_ROLES
       },
       {
         to: "/enrollments",
         label: "Matrículas e renovações",
-        roles: ["ADMIN", "RECEPTIONIST"]
+        roles: OPERATIONS_ROLES
+      },
+      {
+        to: "/plans",
+        label: "Planos",
+        roles: OPERATIONS_ROLES
       }
     ]
   },
@@ -51,7 +57,7 @@ const NAV_SECTIONS: NavSection[] = [
       {
         to: "/workouts",
         label: "Treinos e evolução",
-        roles: ["ADMIN", "RECEPTIONIST", "INSTRUCTOR"]
+        roles: WORKOUT_ROLES
       }
     ]
   },
@@ -61,17 +67,17 @@ const NAV_SECTIONS: NavSection[] = [
       {
         to: "/dashboard",
         label: "Painel operacional",
-        roles: ["ADMIN", "RECEPTIONIST", "INSTRUCTOR"]
+        roles: ALL_STAFF_ROLES
       },
       {
         to: "/reports",
         label: "Relatórios",
-        roles: ["ADMIN", "RECEPTIONIST", "INSTRUCTOR"]
+        roles: ALL_STAFF_ROLES
       },
       {
-        to: "/plans",
-        label: "Planos",
-        roles: ["ADMIN", "RECEPTIONIST"]
+        to: "/team",
+        label: "Equipe",
+        roles: ADMIN_ROLES
       }
     ]
   }

@@ -16,7 +16,13 @@ export interface AuthUser {
   full_name: string;
   role: Role;
   is_active: boolean;
+  must_change_password: boolean;
+  last_login_at: string | null;
   created_at: string;
   updated_at: string;
 }
 
+export interface ChangePasswordPayload {
+  current_password: string;
+  new_password: string;
+}

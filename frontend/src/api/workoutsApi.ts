@@ -8,11 +8,14 @@ import type {
   WorkoutPlan,
   WorkoutPlanPayload,
   WorkoutPlanQueryParams,
+  WorkoutPlanTransferPayload,
+  WorkoutPlanTransferResult,
   WorkoutPlanUpdatePayload
 } from "../types/workout";
 
 const WORKOUT_ENDPOINTS = {
   plans: "/api/workout-plans",
+  transferPlans: "/api/workout-plans/transfer",
   planById: (workoutPlanId: number) => `/api/workout-plans/${workoutPlanId}`,
   exercises: (workoutPlanId: number) => `/api/workout-plans/${workoutPlanId}/exercises`,
   exerciseById: (exerciseId: number) => `/api/exercises/${exerciseId}`,
@@ -42,6 +45,13 @@ export async function updateWorkoutPlan(
 
 export async function deleteWorkoutPlan(workoutPlanId: number): Promise<WorkoutPlan> {
   const response = await httpClient.delete<WorkoutPlan>(WORKOUT_ENDPOINTS.planById(workoutPlanId));
+  return response.data;
+}
+
+export async function transferWorkoutPlans(
+  payload: WorkoutPlanTransferPayload
+): Promise<WorkoutPlanTransferResult> {
+  const response = await httpClient.post<WorkoutPlanTransferResult>(WORKOUT_ENDPOINTS.transferPlans, payload);
   return response.data;
 }
 
@@ -84,4 +94,3 @@ export async function getExerciseProgressByStudentAndExercise(
   );
   return response.data;
 }
-
