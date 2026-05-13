@@ -8,40 +8,108 @@ interface NavItem {
   roles: Role[];
 }
 
-const NAV_ITEMS: NavItem[] = [
-  { to: "/dashboard", label: "Dashboard", roles: ["ADMIN", "RECEPTIONIST", "INSTRUCTOR"] },
-  { to: "/students", label: "Students", roles: ["ADMIN", "RECEPTIONIST", "INSTRUCTOR"] },
-  { to: "/plans", label: "Plans", roles: ["ADMIN", "RECEPTIONIST"] },
-  { to: "/enrollments", label: "Enrollments", roles: ["ADMIN", "RECEPTIONIST"] },
-  { to: "/payments", label: "Payments", roles: ["ADMIN", "RECEPTIONIST"] },
-  { to: "/access-control", label: "Access Control", roles: ["ADMIN", "RECEPTIONIST"] },
-  { to: "/workouts", label: "Workouts", roles: ["ADMIN", "RECEPTIONIST", "INSTRUCTOR"] },
-  { to: "/reports", label: "Reports", roles: ["ADMIN", "RECEPTIONIST", "INSTRUCTOR"] }
+interface NavSection {
+  title: string;
+  items: NavItem[];
+}
+
+const ROLE_LABELS: Record<Role, string> = {
+  ADMIN: "Administrador",
+  RECEPTIONIST: "Recepcao",
+  INSTRUCTOR: "Instrutor"
+};
+
+const NAV_SECTIONS: NavSection[] = [
+  {
+    title: "OPERAÇÕES",
+    items: [
+      {
+        to: "/access-control",
+        label: "Check-in",
+        roles: ["ADMIN", "RECEPTIONIST"]
+      },
+      {
+        to: "/students",
+        label: "Alunos",
+        roles: ["ADMIN", "RECEPTIONIST", "INSTRUCTOR"]
+      },
+      {
+        to: "/payments",
+        label: "Pagamentos",
+        roles: ["ADMIN", "RECEPTIONIST"]
+      },
+      {
+        to: "/enrollments",
+        label: "Matrículas e renovações",
+        roles: ["ADMIN", "RECEPTIONIST"]
+      }
+    ]
+  },
+  {
+    title: "TREINAMENTO",
+    items: [
+      {
+        to: "/workouts",
+        label: "Treinos e evolução",
+        roles: ["ADMIN", "RECEPTIONIST", "INSTRUCTOR"]
+      }
+    ]
+  },
+  {
+    title: "GESTÃO",
+    items: [
+      {
+        to: "/dashboard",
+        label: "Painel operacional",
+        roles: ["ADMIN", "RECEPTIONIST", "INSTRUCTOR"]
+      },
+      {
+        to: "/reports",
+        label: "Relatórios",
+        roles: ["ADMIN", "RECEPTIONIST", "INSTRUCTOR"]
+      },
+      {
+        to: "/plans",
+        label: "Planos",
+        roles: ["ADMIN", "RECEPTIONIST"]
+      }
+    ]
+  }
 ];
 
 export function Navigation(): JSX.Element {
   const { user, logout } = useAuth();
+  const visibleSections = NAV_SECTIONS.map((section) => ({
+    ...section,
+    items: section.items.filter((item) => user !== null && item.roles.includes(user.role))
+  })).filter((section) => section.items.length > 0);
 
   return (
     <aside className="sidebar">
       <div className="brand">
-        <strong>Gym Management</strong>
-        <span>{user?.role}</span>
+        <strong>Gestao da Academia</strong>
+        <span>{user === null ? "" : ROLE_LABELS[user.role]}</span>
       </div>
-      <nav>
-        {NAV_ITEMS.filter((item) => user !== null && item.roles.includes(user.role)).map((item) => (
-          <NavLink key={item.to} to={item.to}>
-            {item.label}
-          </NavLink>
+      <nav className="sidebar-nav" aria-label="Navegacao principal">
+        {visibleSections.map((section) => (
+          <section className="nav-section" key={section.title}>
+            {section.title !== "" && <p className="nav-section-title">{section.title}</p>}
+            <div className="nav-section-links">
+              {section.items.map((item) => (
+                <NavLink key={item.to} to={item.to}>
+                  <span className="nav-label">{item.label}</span>
+                </NavLink>
+              ))}
+            </div>
+          </section>
         ))}
       </nav>
       <div className="sidebar-footer">
-        <span>{user?.full_name}</span>
+        <span>{user === null ? "" : ROLE_LABELS[user.role]}</span>
         <button type="button" className="secondary" onClick={logout}>
-          Logout
+          Sair
         </button>
       </div>
     </aside>
   );
 }
-

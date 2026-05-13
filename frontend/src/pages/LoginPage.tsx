@@ -27,10 +27,10 @@ export function LoginPage(): JSX.Element {
       const redirectTo = typeof location.state === "object" && location.state !== null && "from" in location.state
         ? "/dashboard"
         : "/dashboard";
-      toast.success("Signed in.");
+      toast.success("Entrada realizada.");
       navigate(redirectTo, { replace: true });
     } catch (submitError) {
-      toast.error("Sign in failed.");
+      toast.error("Nao foi possivel entrar.");
       setError(getErrorMessage(submitError));
     } finally {
       setIsSaving(false);
@@ -41,16 +41,16 @@ export function LoginPage(): JSX.Element {
     <main className="login-shell">
       <form className="panel login-panel" onSubmit={handleSubmit}>
         <div>
-          <p className="eyebrow">Gym Management System</p>
-          <h1>Sign in</h1>
+          <p className="eyebrow">Gestao da Academia</p>
+          <h1>Entrar</h1>
         </div>
         {error !== null && <ErrorState message={error} />}
         <label>
-          Email
+          E-mail
           <input type="email" value={email} onChange={(event) => setEmail(event.target.value)} required />
         </label>
         <label>
-          Password
+          Senha
           <input
             type="password"
             value={password}
@@ -59,7 +59,7 @@ export function LoginPage(): JSX.Element {
           />
         </label>
         <button type="submit" disabled={isSaving}>
-          {isSaving ? "Signing in..." : "Sign in"}
+          {isSaving ? "Entrando..." : "Entrar"}
         </button>
       </form>
     </main>

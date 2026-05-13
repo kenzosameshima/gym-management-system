@@ -77,11 +77,11 @@ export function PaymentsPage(): JSX.Element {
   function enrollmentLabel(enrollmentId: number): string {
     const enrollment = enrollments.find((item) => item.id === enrollmentId);
     if (enrollment === undefined) {
-      return `Enrollment #${enrollmentId}`;
+      return `Matricula #${enrollmentId}`;
     }
     const student = students.find((item) => item.id === enrollment.student_id);
     const plan = plans.find((item) => item.id === enrollment.plan_id);
-    return `${student?.name ?? `Student #${enrollment.student_id}`} - ${plan?.name ?? `Plan #${enrollment.plan_id}`} (${enrollment.status}, ${formatDate(enrollment.start_date)})`;
+    return `${student?.name ?? `Aluno #${enrollment.student_id}`} - ${plan?.name ?? `Plano #${enrollment.plan_id}`} (${enrollment.status}, ${formatDate(enrollment.start_date)})`;
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
@@ -90,10 +90,10 @@ export function PaymentsPage(): JSX.Element {
     try {
       await createPayment(form);
       setForm(EMPTY_FORM);
-      toast.success("Payment registered.");
+      toast.success("Mensalidade registrada.");
       await loadPayments();
     } catch (submitError) {
-      toast.error("Payment save failed.");
+      toast.error("Nao foi possivel registrar a mensalidade.");
       setError(getErrorMessage(submitError));
     } finally {
       setIsSaving(false);
@@ -102,21 +102,21 @@ export function PaymentsPage(): JSX.Element {
 
   const columns: Column<Payment>[] = [
     { key: "id", header: "ID", render: (payment) => payment.id, sortValue: (payment) => payment.id },
-    { key: "enrollment", header: "Enrollment", render: (payment) => enrollmentLabel(payment.enrollment_id) },
-    { key: "amount", header: "Amount", render: (payment) => formatCurrency(payment.amount), sortValue: (payment) => Number(payment.amount) },
-    { key: "due", header: "Due", render: (payment) => formatDate(payment.due_date) },
-    { key: "paid", header: "Paid", render: (payment) => formatDate(payment.payment_date) },
+    { key: "enrollment", header: "Matricula", render: (payment) => enrollmentLabel(payment.enrollment_id) },
+    { key: "amount", header: "Valor", render: (payment) => formatCurrency(payment.amount), sortValue: (payment) => Number(payment.amount) },
+    { key: "due", header: "Vencimento", render: (payment) => formatDate(payment.due_date) },
+    { key: "paid", header: "Pago em", render: (payment) => formatDate(payment.payment_date) },
     { key: "status", header: "Status", render: (payment) => payment.status },
     {
       key: "actions",
-      header: "Actions",
+      header: "Acoes",
       render: (payment) => (
         <div className="row-actions">
-          <button type="button" className="secondary" disabled={payment.status === "PAID"} onClick={() => void markPaymentPaid(payment.id).then(() => { toast.success("Payment marked paid."); return loadPayments(); })}>
-            Mark paid
+          <button type="button" className="secondary" disabled={payment.status === "PAID"} onClick={() => void markPaymentPaid(payment.id).then(() => { toast.success("Pagamento confirmado."); return loadPayments(); })}>
+            Confirmar pagamento
           </button>
-          <button type="button" className="secondary" onClick={() => void updatePayment(payment.id, { status: "OVERDUE" }).then(() => { toast.success("Payment marked overdue."); return loadPayments(); })}>
-            Mark overdue
+          <button type="button" className="secondary" onClick={() => void updatePayment(payment.id, { status: "OVERDUE" }).then(() => { toast.success("Pagamento marcado como vencido."); return loadPayments(); })}>
+            Marcar vencido
           </button>
         </div>
       )
@@ -126,34 +126,34 @@ export function PaymentsPage(): JSX.Element {
 
   return (
     <section className="page-stack">
-      <header className="page-header"><h1>Payments</h1></header>
+      <header className="page-header"><h1>Receber mensalidade</h1></header>
       {error !== null && <ErrorState message={error} />}
       <form className="toolbar" onSubmit={(event) => { event.preventDefault(); void loadPayments(0); }}>
-        <label>Student search<input placeholder="Name, CPF, or email" value={studentSearch} onChange={(event) => setStudentSearch(event.target.value)} /></label>
+        <label>Buscar aluno<input placeholder="Nome, CPF ou e-mail" value={studentSearch} onChange={(event) => setStudentSearch(event.target.value)} /></label>
         <label>Status<select value={statusFilter} disabled={overdueOnly} onChange={(event) => setStatusFilter(event.target.value)}>
-          <option value="">All</option>
+          <option value="">Todos</option>
           {PAYMENT_STATUSES.map((status) => <option key={status}>{status}</option>)}
         </select></label>
-        <label className="inline-check"><input type="checkbox" checked={overdueOnly} onChange={(event) => setOverdueOnly(event.target.checked)} /> Overdue only</label>
-        <button type="submit">Filter</button>
+        <label className="inline-check"><input type="checkbox" checked={overdueOnly} onChange={(event) => setOverdueOnly(event.target.checked)} /> Apenas vencidos</label>
+        <button type="submit">Filtrar</button>
       </form>
       <form className="panel form-grid" onSubmit={handleSubmit}>
-        <label>Enrollment
+        <label>Matricula
           <select value={form.enrollment_id || ""} onChange={(event) => setForm({ ...form, enrollment_id: Number(event.target.value) })} required disabled={isLoadingOptions || activeEnrollments.length === 0}>
-            <option value="">{isLoadingOptions ? "Loading enrollments..." : "Select by student name"}</option>
+            <option value="">{isLoadingOptions ? "Carregando matriculas..." : "Selecionar pelo aluno"}</option>
             {activeEnrollments.map((enrollment) => <option key={enrollment.id} value={enrollment.id}>{enrollmentLabel(enrollment.id)}</option>)}
           </select>
         </label>
-        <label>Amount<input placeholder="Amount" value={form.amount} onChange={(event) => setForm({ ...form, amount: event.target.value })} required /></label>
-        <label>Due date<input type="date" value={form.due_date} onChange={(event) => setForm({ ...form, due_date: event.target.value })} required /></label>
+        <label>Valor<input placeholder="Valor" value={form.amount} onChange={(event) => setForm({ ...form, amount: event.target.value })} required /></label>
+        <label>Vencimento<input type="date" value={form.due_date} onChange={(event) => setForm({ ...form, due_date: event.target.value })} required /></label>
         <label>Status
           <select value={form.status} onChange={(event) => setForm({ ...form, status: event.target.value as PaymentCreatePayload["status"] })}>
             {PAYMENT_STATUSES.map((status) => <option key={status}>{status}</option>)}
           </select>
         </label>
-        <button type="submit" disabled={isSaving}>{isSaving ? "Saving..." : "Register payment"}</button>
+        <button type="submit" disabled={isSaving}>{isSaving ? "Salvando..." : "Registrar mensalidade"}</button>
       </form>
-      {page === null ? <LoadingState /> : <DataTable columns={columns} rows={sorted.rows} getRowKey={(payment) => payment.id} emptyMessage="No payments found." isLoading={isLoading} total={page.total} limit={page.limit} offset={page.offset} onPageChange={(nextOffset) => void loadPayments(nextOffset)} sortKey={sorted.sortKey} sortDirection={sorted.sortDirection} onSortChange={sorted.setSortKey} />}
+      {page === null ? <LoadingState /> : <DataTable columns={columns} rows={sorted.rows} getRowKey={(payment) => payment.id} emptyMessage="Nenhuma mensalidade encontrada." isLoading={isLoading} total={page.total} limit={page.limit} offset={page.offset} onPageChange={(nextOffset) => void loadPayments(nextOffset)} sortKey={sorted.sortKey} sortDirection={sorted.sortDirection} onSortChange={sorted.setSortKey} />}
     </section>
   );
 }

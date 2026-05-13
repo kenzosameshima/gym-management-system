@@ -7,7 +7,7 @@ export function ProtectedRoute(): JSX.Element {
   const location = useLocation();
 
   if (isLoading) {
-    return <LoadingState message="Checking session..." />;
+    return <LoadingState message="Verificando sessao..." />;
   }
 
   if (!isAuthenticated) {
@@ -16,4 +16,3 @@ export function ProtectedRoute(): JSX.Element {
 
   return <Outlet />;
 }
-

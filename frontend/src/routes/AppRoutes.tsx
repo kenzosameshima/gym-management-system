@@ -7,14 +7,14 @@ import { AccessControlPage } from "../pages/AccessControlPage";
 import { LoginPage } from "../pages/LoginPage";
 import { NotFoundPage } from "../pages/NotFoundPage";
 import { PlansPage } from "../pages/PlansPage";
-import { StudentsPage } from "../pages/StudentsPage";
+import { StudentWorkspacePage } from "../pages/StudentWorkspacePage";
 import { ProtectedRoute } from "./ProtectedRoute";
 import { RoleRoute } from "./RoleRoute";
 
 const MANAGEMENT_ROLES = ["ADMIN", "RECEPTIONIST"] as const;
 const WORKOUT_ROLES = ["ADMIN", "RECEPTIONIST", "INSTRUCTOR"] as const;
 const DashboardPage = lazy(() =>
-  import("../pages/DashboardPage").then((module) => ({ default: module.DashboardPage }))
+  import("../pages/RoleDashboardPage").then((module) => ({ default: module.RoleDashboardPage }))
 );
 const EnrollmentsPage = lazy(() =>
   import("../pages/EnrollmentsPage").then((module) => ({ default: module.EnrollmentsPage }))
@@ -30,7 +30,7 @@ const WorkoutPlansPage = lazy(() =>
 );
 
 function LazyPage({ children }: { children: React.ReactNode }): JSX.Element {
-  return <Suspense fallback={<LoadingState message="Loading page..." />}>{children}</Suspense>;
+  return <Suspense fallback={<LoadingState message="Carregando tela..." />}>{children}</Suspense>;
 }
 
 export function AppRoutes(): JSX.Element {
@@ -41,7 +41,7 @@ export function AppRoutes(): JSX.Element {
         <Route element={<AppLayout />}>
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
           <Route path="/dashboard" element={<LazyPage><DashboardPage /></LazyPage>} />
-          <Route path="/students" element={<StudentsPage />} />
+          <Route path="/students" element={<StudentWorkspacePage />} />
           <Route element={<RoleRoute roles={[...MANAGEMENT_ROLES]} />}>
             <Route path="/plans" element={<PlansPage />} />
             <Route path="/enrollments" element={<LazyPage><EnrollmentsPage /></LazyPage>} />

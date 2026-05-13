@@ -87,48 +87,48 @@ export function ReportsPage(): JSX.Element {
   }
 
   const activeColumns: Column<ActiveStudentReportItem>[] = [
-    { key: "name", header: "Name", render: (item) => item.name },
+    { key: "name", header: "Nome", render: (item) => item.name },
     { key: "cpf", header: "CPF", render: (item) => item.cpf },
-    { key: "email", header: "Email", render: (item) => item.email },
-    { key: "financial", header: "Financial status", render: (item) => formatFinancialStatus(item.financial_status) }
+    { key: "email", header: "E-mail", render: (item) => item.email },
+    { key: "financial", header: "Situacao financeira", render: (item) => formatFinancialStatus(item.financial_status) }
   ];
   const defaulterColumns: Column<DefaulterStudentReportItem>[] = [
-    { key: "name", header: "Name", render: (item) => item.name },
-    { key: "amount", header: "Overdue", render: (item) => formatCurrency(item.overdue_amount) },
-    { key: "payments", header: "Payments", render: (item) => item.overdue_payments }
+    { key: "name", header: "Nome", render: (item) => item.name },
+    { key: "amount", header: "Vencido", render: (item) => formatCurrency(item.overdue_amount) },
+    { key: "payments", header: "Mensalidades", render: (item) => item.overdue_payments }
   ];
   const planColumns: Column<MostUsedPlanReportItem>[] = [
-    { key: "name", header: "Plan", render: (item) => item.plan_name },
-    { key: "count", header: "Enrollments", render: (item) => item.enrollments_count }
+    { key: "name", header: "Plano", render: (item) => item.plan_name },
+    { key: "count", header: "Matriculas", render: (item) => item.enrollments_count }
   ];
   const accessColumns: Column<DailyAccessReportItem>[] = [
-    { key: "date", header: "Date", render: (item) => item.date },
+    { key: "date", header: "Data", render: (item) => item.date },
     { key: "total", header: "Total", render: (item) => item.total_attempts },
-    { key: "allowed", header: "Allowed", render: (item) => item.allowed_count },
-    { key: "blocked", header: "Blocked", render: (item) => item.blocked_count }
+    { key: "allowed", header: "Liberados", render: (item) => item.allowed_count },
+    { key: "blocked", header: "Bloqueados", render: (item) => item.blocked_count }
   ];
 
   return (
     <section className="page-stack">
-      <header className="page-header"><h1>Reports</h1></header>
+      <header className="page-header"><h1>Indicadores e relatorios</h1></header>
       {error !== null && <ErrorState message={error} />}
       <form className="toolbar" onSubmit={handleFilter}>
         <input type="date" value={startDate} onChange={(event) => setStartDate(event.target.value)} />
         <input type="date" value={endDate} onChange={(event) => setEndDate(event.target.value)} />
-        <button type="submit">Apply filters</button>
+        <button type="submit">Aplicar filtros</button>
       </form>
       {isLoading ? <LoadingState /> : (
         <>
           <div className="stats-grid">
-            {data.active !== undefined && <StatCard label="Active students" value={data.active.total} />}
-            {data.defaulters !== undefined && <StatCard label="Defaulters" value={data.defaulters.total} />}
-            {data.revenue !== undefined && <StatCard label="Expected revenue" value={formatCurrency(data.revenue.expected_revenue)} />}
-            {data.workout !== undefined && <StatCard label="Active workout plans" value={data.workout.active_workout_plans} />}
+            {data.active !== undefined && <StatCard label="Alunos ativos" value={data.active.total} />}
+            {data.defaulters !== undefined && <StatCard label="Inadimplentes" value={data.defaulters.total} />}
+            {data.revenue !== undefined && <StatCard label="Receita prevista" value={formatCurrency(data.revenue.expected_revenue)} />}
+            {data.workout !== undefined && <StatCard label="Fichas ativas" value={data.workout.active_workout_plans} />}
           </div>
-          {data.active !== undefined && <DataTable columns={activeColumns} rows={data.active.students} getRowKey={(item) => item.id} emptyMessage="No active students." />}
-          {data.defaulters !== undefined && <DataTable columns={defaulterColumns} rows={data.defaulters.students} getRowKey={(item) => item.student_id} emptyMessage="No defaulters." />}
-          {data.plans !== undefined && <DataTable columns={planColumns} rows={data.plans.plans} getRowKey={(item) => item.plan_id} emptyMessage="No plan usage data." />}
-          {data.access !== undefined && <DataTable columns={accessColumns} rows={data.access.days} getRowKey={(item) => item.date} emptyMessage="No access data." />}
+          {data.active !== undefined && <DataTable columns={activeColumns} rows={data.active.students} getRowKey={(item) => item.id} emptyMessage="Nenhum aluno ativo." />}
+          {data.defaulters !== undefined && <DataTable columns={defaulterColumns} rows={data.defaulters.students} getRowKey={(item) => item.student_id} emptyMessage="Nenhum inadimplente." />}
+          {data.plans !== undefined && <DataTable columns={planColumns} rows={data.plans.plans} getRowKey={(item) => item.plan_id} emptyMessage="Sem dados de planos." />}
+          {data.access !== undefined && <DataTable columns={accessColumns} rows={data.access.days} getRowKey={(item) => item.date} emptyMessage="Sem dados de acesso." />}
         </>
       )}
     </section>

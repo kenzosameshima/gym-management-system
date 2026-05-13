@@ -89,11 +89,11 @@ export function WorkoutPlansPage(): JSX.Element {
   }, []);
 
   function studentLabel(studentId: number): string {
-    return students.find((student) => student.id === studentId)?.name ?? `Student #${studentId}`;
+    return students.find((student) => student.id === studentId)?.name ?? `Aluno #${studentId}`;
   }
 
   function instructorLabel(instructorId: number): string {
-    return instructors.find((instructor) => instructor.id === instructorId)?.full_name ?? `Instructor #${instructorId}`;
+    return instructors.find((instructor) => instructor.id === instructorId)?.full_name ?? `Instrutor #${instructorId}`;
   }
 
   async function selectPlan(plan: WorkoutPlan): Promise<void> {
@@ -118,10 +118,10 @@ export function WorkoutPlansPage(): JSX.Element {
       }
       setPlanForm(EMPTY_PLAN);
       setEditingPlanId(null);
-      toast.success(editingPlanId === null ? "Workout plan created." : "Workout plan updated.");
+      toast.success(editingPlanId === null ? "Ficha de treino criada." : "Ficha de treino atualizada.");
       await loadPlans();
     } catch (submitError) {
-      toast.error("Workout plan save failed.");
+      toast.error("Nao foi possivel salvar a ficha.");
       setError(getErrorMessage(submitError));
     } finally {
       setIsSaving(false);
@@ -142,10 +142,10 @@ export function WorkoutPlansPage(): JSX.Element {
       }
       setExerciseForm(EMPTY_EXERCISE);
       setEditingExerciseId(null);
-      toast.success(editingExerciseId === null ? "Exercise added." : "Exercise updated.");
+      toast.success(editingExerciseId === null ? "Exercicio adicionado." : "Exercicio atualizado.");
       setExercises(await getExercises(selectedPlan.id));
     } catch (submitError) {
-      toast.error("Exercise save failed.");
+      toast.error("Nao foi possivel salvar o exercicio.");
       setError(getErrorMessage(submitError));
     } finally {
       setIsSaving(false);
@@ -168,10 +168,10 @@ export function WorkoutPlansPage(): JSX.Element {
         notes: String(formData.get("notes") ?? "") || null
       });
       setProgress(await getExerciseProgressByStudentAndExercise(selectedPlan.student_id, selectedExerciseId));
-      toast.success("Progress registered.");
+      toast.success("Evolucao registrada.");
       event.currentTarget.reset();
     } catch (submitError) {
-      toast.error("Progress save failed.");
+      toast.error("Nao foi possivel registrar a evolucao.");
       setError(getErrorMessage(submitError));
     } finally {
       setIsSaving(false);
@@ -180,38 +180,38 @@ export function WorkoutPlansPage(): JSX.Element {
 
   const planColumns: Column<WorkoutPlan>[] = [
     { key: "id", header: "ID", render: (plan) => plan.id, sortValue: (plan) => plan.id },
-    { key: "student", header: "Student", render: (plan) => studentLabel(plan.student_id) },
-    { key: "instructor", header: "Instructor", render: (plan) => instructorLabel(plan.instructor_id) },
-    { key: "goal", header: "Goal", render: (plan) => plan.goal, sortValue: (plan) => plan.goal },
+    { key: "student", header: "Aluno", render: (plan) => studentLabel(plan.student_id) },
+    { key: "instructor", header: "Instrutor", render: (plan) => instructorLabel(plan.instructor_id) },
+    { key: "goal", header: "Objetivo", render: (plan) => plan.goal, sortValue: (plan) => plan.goal },
     { key: "status", header: "Status", render: (plan) => plan.status, sortValue: (plan) => plan.status },
     {
       key: "actions",
-      header: "Actions",
+      header: "Acoes",
       render: (plan) => (
         <div className="row-actions">
-          <button type="button" className="secondary" onClick={() => void selectPlan(plan)}>Open</button>
-          {canWrite && <button type="button" className="secondary" onClick={() => { setEditingPlanId(plan.id); setPlanForm({ student_id: plan.student_id, instructor_id: plan.instructor_id, goal: plan.goal, notes: plan.notes ?? "", status: plan.status }); }}>Edit</button>}
-          {canWrite && <button type="button" className="danger" onClick={() => { if (confirm("Deactivate this workout plan?")) void deleteWorkoutPlan(plan.id).then(() => { toast.success("Workout plan deactivated."); return loadPlans(); }); }}>Delete</button>}
+          <button type="button" className="secondary" onClick={() => void selectPlan(plan)}>Abrir ficha</button>
+          {canWrite && <button type="button" className="secondary" onClick={() => { setEditingPlanId(plan.id); setPlanForm({ student_id: plan.student_id, instructor_id: plan.instructor_id, goal: plan.goal, notes: plan.notes ?? "", status: plan.status }); }}>Editar</button>}
+          {canWrite && <button type="button" className="danger" onClick={() => { if (confirm("Desativar esta ficha?")) void deleteWorkoutPlan(plan.id).then(() => { toast.success("Ficha desativada."); return loadPlans(); }); }}>Desativar</button>}
         </div>
       )
     }
   ];
 
   const exerciseColumns: Column<Exercise>[] = [
-    { key: "name", header: "Exercise", render: (exercise) => exercise.name },
-    { key: "group", header: "Group", render: (exercise) => exercise.muscle_group },
-    { key: "sets", header: "Sets", render: (exercise) => exercise.sets },
+    { key: "name", header: "Exercicio", render: (exercise) => exercise.name },
+    { key: "group", header: "Grupo", render: (exercise) => exercise.muscle_group },
+    { key: "sets", header: "Series", render: (exercise) => exercise.sets },
     { key: "reps", header: "Reps", render: (exercise) => exercise.repetitions },
-    { key: "load", header: "Load", render: (exercise) => exercise.load ?? "-" },
+    { key: "load", header: "Carga", render: (exercise) => exercise.load ?? "-" },
     { key: "status", header: "Status", render: (exercise) => exercise.status },
     {
       key: "actions",
-      header: "Actions",
+      header: "Acoes",
       render: (exercise) => (
         <div className="row-actions">
-          <button type="button" className="secondary" onClick={() => { setSelectedExerciseId(exercise.id); if (selectedPlan !== null) void getExerciseProgressByStudentAndExercise(selectedPlan.student_id, exercise.id).then(setProgress); }}>Progress</button>
-          {canWrite && <button type="button" className="secondary" onClick={() => { setEditingExerciseId(exercise.id); setExerciseForm({ name: exercise.name, muscle_group: exercise.muscle_group, sets: exercise.sets, repetitions: exercise.repetitions, load: exercise.load ?? "", notes: exercise.notes ?? "", status: exercise.status }); }}>Edit</button>}
-          {canWrite && <button type="button" className="danger" onClick={() => { if (confirm("Deactivate this exercise?") && selectedPlan !== null) void deleteExercise(exercise.id).then(() => { toast.success("Exercise deactivated."); return getExercises(selectedPlan.id); }).then(setExercises); }}>Delete</button>}
+          <button type="button" className="secondary" onClick={() => { setSelectedExerciseId(exercise.id); if (selectedPlan !== null) void getExerciseProgressByStudentAndExercise(selectedPlan.student_id, exercise.id).then(setProgress); }}>Evolucao</button>
+          {canWrite && <button type="button" className="secondary" onClick={() => { setEditingExerciseId(exercise.id); setExerciseForm({ name: exercise.name, muscle_group: exercise.muscle_group, sets: exercise.sets, repetitions: exercise.repetitions, load: exercise.load ?? "", notes: exercise.notes ?? "", status: exercise.status }); }}>Editar</button>}
+          {canWrite && <button type="button" className="danger" onClick={() => { if (confirm("Desativar este exercicio?") && selectedPlan !== null) void deleteExercise(exercise.id).then(() => { toast.success("Exercicio desativado."); return getExercises(selectedPlan.id); }).then(setExercises); }}>Desativar</button>}
         </div>
       )
     }
@@ -220,84 +220,84 @@ export function WorkoutPlansPage(): JSX.Element {
 
   return (
     <section className="page-stack">
-      <header className="page-header"><h1>Workout Plans</h1></header>
+      <header className="page-header"><h1>Fichas de treino</h1></header>
       {error !== null && <ErrorState message={error} />}
       <form className="toolbar" onSubmit={(event) => { event.preventDefault(); void loadPlans(0); }}>
-        <label>Student<input placeholder="Name, CPF, or email" value={studentSearch} onChange={(event) => setStudentSearch(event.target.value)} /></label>
-        <label>Instructor<input placeholder="Name or email" value={instructorSearch} onChange={(event) => setInstructorSearch(event.target.value)} /></label>
+        <label>Aluno<input placeholder="Nome, CPF ou e-mail" value={studentSearch} onChange={(event) => setStudentSearch(event.target.value)} /></label>
+        <label>Instrutor<input placeholder="Nome ou e-mail" value={instructorSearch} onChange={(event) => setInstructorSearch(event.target.value)} /></label>
         <label>Status<select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as "" | WorkoutPlanPayload["status"])}>
           <option value="">All</option>
           {STATUS_OPTIONS.map((status) => <option key={status}>{status}</option>)}
         </select></label>
-        <button type="submit">Filter</button>
+        <button type="submit">Filtrar</button>
       </form>
       {canWrite && (
         <form className="panel form-grid" onSubmit={handlePlanSubmit}>
-          <label>Student
+          <label>Aluno
             <select value={planForm.student_id || ""} onChange={(event) => setPlanForm({ ...planForm, student_id: Number(event.target.value) })} required disabled={isLoadingOptions || students.length === 0}>
-              <option value="">{isLoadingOptions ? "Loading students..." : "Select student"}</option>
+              <option value="">{isLoadingOptions ? "Carregando alunos..." : "Selecionar aluno"}</option>
               {students.map((student) => <option key={student.id} value={student.id}>{student.name} - {student.email}</option>)}
             </select>
           </label>
-          <label>Instructor
+          <label>Instrutor
             <select value={user?.role === "INSTRUCTOR" ? user.id : planForm.instructor_id || ""} onChange={(event) => setPlanForm({ ...planForm, instructor_id: Number(event.target.value) })} required disabled={user?.role === "INSTRUCTOR" || isLoadingOptions || instructors.length === 0}>
-              <option value="">{isLoadingOptions ? "Loading instructors..." : "Select instructor"}</option>
+              <option value="">{isLoadingOptions ? "Carregando instrutores..." : "Selecionar instrutor"}</option>
               {(user?.role === "INSTRUCTOR" && !instructors.some((instructor) => instructor.id === user.id) ? [user, ...instructors] : instructors).map((instructor) => (
                 <option key={instructor.id} value={instructor.id}>{instructor.full_name} - {instructor.email}</option>
               ))}
             </select>
           </label>
-          <label>Goal<input placeholder="Goal" value={planForm.goal} onChange={(event) => setPlanForm({ ...planForm, goal: event.target.value })} required /></label>
-          <label>Notes<input placeholder="Notes" value={planForm.notes ?? ""} onChange={(event) => setPlanForm({ ...planForm, notes: event.target.value })} /></label>
+          <label>Objetivo<input placeholder="Objetivo" value={planForm.goal} onChange={(event) => setPlanForm({ ...planForm, goal: event.target.value })} required /></label>
+          <label>Observacoes<input placeholder="Observacoes" value={planForm.notes ?? ""} onChange={(event) => setPlanForm({ ...planForm, notes: event.target.value })} /></label>
           <label>Status<select value={planForm.status} onChange={(event) => setPlanForm({ ...planForm, status: event.target.value as WorkoutPlanPayload["status"] })}>{STATUS_OPTIONS.map((status) => <option key={status}>{status}</option>)}</select></label>
-          <button type="submit" disabled={isSaving}>{isSaving ? "Saving..." : editingPlanId === null ? "Create plan" : "Update plan"}</button>
+          <button type="submit" disabled={isSaving}>{isSaving ? "Salvando..." : editingPlanId === null ? "Criar ficha" : "Atualizar ficha"}</button>
         </form>
       )}
-      {page === null ? <LoadingState /> : <DataTable columns={planColumns} rows={sortedPlans.rows} getRowKey={(plan) => plan.id} emptyMessage="No workout plans found." isLoading={isLoading} total={page.total} limit={page.limit} offset={page.offset} onPageChange={(nextOffset) => void loadPlans(nextOffset)} sortKey={sortedPlans.sortKey} sortDirection={sortedPlans.sortDirection} onSortChange={sortedPlans.setSortKey} />}
+      {page === null ? <LoadingState /> : <DataTable columns={planColumns} rows={sortedPlans.rows} getRowKey={(plan) => plan.id} emptyMessage="Nenhuma ficha encontrada." isLoading={isLoading} total={page.total} limit={page.limit} offset={page.offset} onPageChange={(nextOffset) => void loadPlans(nextOffset)} sortKey={sortedPlans.sortKey} sortDirection={sortedPlans.sortDirection} onSortChange={sortedPlans.setSortKey} />}
       {selectedPlan !== null && (
         <section className="page-stack">
-          <h2>Workout sheet for {studentLabel(selectedPlan.student_id)}</h2>
+          <h2>Ficha de {studentLabel(selectedPlan.student_id)}</h2>
           {canWrite && (
             <form className="panel form-grid" onSubmit={handleExerciseSubmit}>
-              <label>Exercise name<input placeholder="Exercise name" value={exerciseForm.name} onChange={(event) => setExerciseForm({ ...exerciseForm, name: event.target.value })} required /></label>
-              <label>Muscle group<input placeholder="Muscle group" value={exerciseForm.muscle_group} onChange={(event) => setExerciseForm({ ...exerciseForm, muscle_group: event.target.value })} required /></label>
-              <label>Sets<input type="number" min="1" value={exerciseForm.sets} onChange={(event) => setExerciseForm({ ...exerciseForm, sets: Number(event.target.value) })} required /></label>
-              <label>Repetitions<input type="number" min="1" value={exerciseForm.repetitions} onChange={(event) => setExerciseForm({ ...exerciseForm, repetitions: Number(event.target.value) })} required /></label>
-              <label>Load<input placeholder="Load" value={exerciseForm.load ?? ""} onChange={(event) => setExerciseForm({ ...exerciseForm, load: event.target.value })} /></label>
-              <label>Notes<input placeholder="Notes" value={exerciseForm.notes ?? ""} onChange={(event) => setExerciseForm({ ...exerciseForm, notes: event.target.value })} /></label>
+              <label>Exercicio<input placeholder="Exercicio" value={exerciseForm.name} onChange={(event) => setExerciseForm({ ...exerciseForm, name: event.target.value })} required /></label>
+              <label>Grupo muscular<input placeholder="Grupo muscular" value={exerciseForm.muscle_group} onChange={(event) => setExerciseForm({ ...exerciseForm, muscle_group: event.target.value })} required /></label>
+              <label>Series<input type="number" min="1" value={exerciseForm.sets} onChange={(event) => setExerciseForm({ ...exerciseForm, sets: Number(event.target.value) })} required /></label>
+              <label>Repeticoes<input type="number" min="1" value={exerciseForm.repetitions} onChange={(event) => setExerciseForm({ ...exerciseForm, repetitions: Number(event.target.value) })} required /></label>
+              <label>Carga<input placeholder="Carga" value={exerciseForm.load ?? ""} onChange={(event) => setExerciseForm({ ...exerciseForm, load: event.target.value })} /></label>
+              <label>Observacoes<input placeholder="Observacoes" value={exerciseForm.notes ?? ""} onChange={(event) => setExerciseForm({ ...exerciseForm, notes: event.target.value })} /></label>
               <label>Status<select value={exerciseForm.status} onChange={(event) => setExerciseForm({ ...exerciseForm, status: event.target.value as ExercisePayload["status"] })}>{STATUS_OPTIONS.map((status) => <option key={status}>{status}</option>)}</select></label>
-              <button type="submit" disabled={isSaving}>{editingExerciseId === null ? "Add exercise" : "Update exercise"}</button>
+              <button type="submit" disabled={isSaving}>{editingExerciseId === null ? "Adicionar exercicio" : "Atualizar exercicio"}</button>
             </form>
           )}
-          <DataTable columns={exerciseColumns} rows={exercises} getRowKey={(exercise) => exercise.id} emptyMessage="No exercises found." />
+          <DataTable columns={exerciseColumns} rows={exercises} getRowKey={(exercise) => exercise.id} emptyMessage="Nenhum exercicio encontrado." />
           <div className="exercise-groups">
             {exercises.map((exercise) => (
               <details key={exercise.id} className="panel" open={exercise.id === selectedExerciseId}>
                 <summary>{exercise.name} - {exercise.muscle_group} - {exercise.sets}x{exercise.repetitions}</summary>
                 <p>Status: {exercise.status}</p>
-                <p>Load: {exercise.load ?? "-"}</p>
-                <p>{exercise.notes ?? "No notes."}</p>
+                <p>Carga: {exercise.load ?? "-"}</p>
+                <p>{exercise.notes ?? "Sem observacoes."}</p>
               </details>
             ))}
           </div>
           {canWrite && selectedExerciseId !== null && (
             <form className="panel form-grid" onSubmit={handleProgressSubmit}>
-              <label>Load<input name="load" placeholder="Load" /></label>
-              <label>Repetitions<input name="repetitions" type="number" min="1" placeholder="Repetitions" required /></label>
-              <label>Notes<input name="notes" placeholder="Notes" /></label>
-              <button type="submit" disabled={isSaving}>Register progress</button>
+              <label>Carga<input name="load" placeholder="Carga" /></label>
+              <label>Repeticoes<input name="repetitions" type="number" min="1" placeholder="Repeticoes" required /></label>
+              <label>Observacoes<input name="notes" placeholder="Observacoes" /></label>
+              <button type="submit" disabled={isSaving}>Registrar evolucao</button>
             </form>
           )}
           <DataTable
             columns={[
-              { key: "date", header: "Recorded", render: (item) => formatDateTime(item.recorded_at) },
-              { key: "load", header: "Load", render: (item) => item.load ?? "-" },
+              { key: "date", header: "Registrado em", render: (item) => formatDateTime(item.recorded_at) },
+              { key: "load", header: "Carga", render: (item) => item.load ?? "-" },
               { key: "reps", header: "Reps", render: (item) => item.repetitions },
-              { key: "notes", header: "Notes", render: (item) => item.notes ?? "-" }
+              { key: "notes", header: "Observacoes", render: (item) => item.notes ?? "-" }
             ]}
             rows={progress}
             getRowKey={(item) => item.id}
-            emptyMessage="No progress records selected."
+            emptyMessage="Selecione um exercicio para ver a evolucao."
           />
         </section>
       )}

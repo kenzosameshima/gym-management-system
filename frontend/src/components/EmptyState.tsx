@@ -3,6 +3,5 @@ interface EmptyStateProps {
 }
 
 export function EmptyState({ message }: EmptyStateProps): JSX.Element {
-  return <div className="state state-empty">{message}</div>;
+  return <div className="state state-empty" role="status">{message}</div>;
 }
-

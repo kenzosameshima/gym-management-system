@@ -16,3 +16,11 @@ export interface AccessDecision {
   reason: AccessDeniedReason | null;
 }
 
+export interface AccessLog {
+  id: number;
+  student_id: number | null;
+  cpf_attempted: string;
+  accessed_at: string;
+  allowed: boolean;
+  reason: AccessDeniedReason | null;
+}

@@ -75,10 +75,10 @@ export function EnrollmentsPage(): JSX.Element {
         first_payment_due_date: form.first_payment_due_date || null
       });
       setForm(EMPTY_FORM);
-      toast.success("Enrollment created.");
+      toast.success("Matricula criada.");
       await loadEnrollments();
     } catch (submitError) {
-      toast.error("Enrollment save failed.");
+      toast.error("Nao foi possivel criar a matricula.");
       setError(getErrorMessage(submitError));
     } finally {
       setIsSaving(false);
@@ -87,18 +87,18 @@ export function EnrollmentsPage(): JSX.Element {
 
   const columns: Column<Enrollment>[] = [
     { key: "id", header: "ID", render: (enrollment) => enrollment.id, sortValue: (enrollment) => enrollment.id },
-    { key: "student", header: "Student", render: (enrollment) => students.find((student) => student.id === enrollment.student_id)?.name ?? `Student #${enrollment.student_id}` },
-    { key: "plan", header: "Plan", render: (enrollment) => plans.find((plan) => plan.id === enrollment.plan_id)?.name ?? `Plan #${enrollment.plan_id}` },
-    { key: "start", header: "Start", render: (enrollment) => formatDate(enrollment.start_date) },
-    { key: "end", header: "End", render: (enrollment) => formatDate(enrollment.end_date) },
+    { key: "student", header: "Aluno", render: (enrollment) => students.find((student) => student.id === enrollment.student_id)?.name ?? `Aluno #${enrollment.student_id}` },
+    { key: "plan", header: "Plano", render: (enrollment) => plans.find((plan) => plan.id === enrollment.plan_id)?.name ?? `Plano #${enrollment.plan_id}` },
+    { key: "start", header: "Inicio", render: (enrollment) => formatDate(enrollment.start_date) },
+    { key: "end", header: "Fim", render: (enrollment) => formatDate(enrollment.end_date) },
     { key: "status", header: "Status", render: (enrollment) => enrollment.status, sortValue: (enrollment) => enrollment.status },
-    { key: "payment", header: "Payment status", render: (enrollment) => enrollment.payment_status ?? "-" },
+    { key: "payment", header: "Pagamento", render: (enrollment) => enrollment.payment_status ?? "-" },
     {
       key: "actions",
-      header: "Actions",
+      header: "Acoes",
       render: (enrollment) => (
-        <button type="button" className="danger" onClick={() => { if (confirm("Cancel this enrollment?")) void cancelEnrollment(enrollment.id).then(() => { toast.success("Enrollment cancelled."); return loadEnrollments(); }); }}>
-          Cancel
+        <button type="button" className="danger" onClick={() => { if (confirm("Cancelar esta matricula?")) void cancelEnrollment(enrollment.id).then(() => { toast.success("Matricula cancelada."); return loadEnrollments(); }); }}>
+          Cancelar
         </button>
       )
     }
@@ -107,45 +107,45 @@ export function EnrollmentsPage(): JSX.Element {
 
   return (
     <section className="page-stack">
-      <header className="page-header"><h1>Enrollments</h1></header>
+      <header className="page-header"><h1>Nova matricula</h1></header>
       {error !== null && <ErrorState message={error} />}
       <form className="toolbar" onSubmit={(event) => { event.preventDefault(); void loadEnrollments(0); }}>
-        <label>Student search<input placeholder="Name, CPF, or email" value={studentSearch} onChange={(event) => setStudentSearch(event.target.value)} /></label>
+        <label>Buscar aluno<input placeholder="Nome, CPF ou e-mail" value={studentSearch} onChange={(event) => setStudentSearch(event.target.value)} /></label>
         <label>Status<select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
-          <option value="">All</option>
+          <option value="">Todos</option>
           {ENROLLMENT_STATUSES.map((status) => <option key={status}>{status}</option>)}
         </select></label>
-        <button type="submit">Filter</button>
+        <button type="submit">Filtrar</button>
       </form>
       <form className="panel form-grid" onSubmit={handleSubmit}>
         <label>
           <span className="field-title-row">
-            Student
+            Aluno
             <span className="inline-check">
               <input type="checkbox" checked={showStudentEmail} onChange={(event) => setShowStudentEmail(event.target.checked)} />
-              Email
+              E-mail
             </span>
           </span>
           <select value={form.student_id || ""} onChange={(event) => setForm({ ...form, student_id: Number(event.target.value) })} required disabled={isLoadingOptions || students.length === 0}>
-            <option value="">{isLoadingOptions ? "Loading students..." : showStudentEmail ? "Select student by email" : "Select student by name"}</option>
+            <option value="">{isLoadingOptions ? "Carregando alunos..." : showStudentEmail ? "Selecionar por e-mail" : "Selecionar por nome"}</option>
             {students.map((student) => (
               <option key={student.id} value={student.id}>{showStudentEmail ? student.email : student.name}</option>
             ))}
           </select>
         </label>
-        <label>Plan
+        <label>Plano
           <select value={form.plan_id || ""} onChange={(event) => setForm({ ...form, plan_id: Number(event.target.value) })} required disabled={isLoadingOptions || plans.length === 0}>
-            <option value="">{isLoadingOptions ? "Loading plans..." : "Select plan modality"}</option>
+            <option value="">{isLoadingOptions ? "Carregando planos..." : "Selecionar plano"}</option>
             {plans.map((plan) => (
               <option key={plan.id} value={plan.id}>{plan.name}</option>
             ))}
           </select>
         </label>
-        <label>Start date<input type="date" value={form.start_date} onChange={(event) => setForm({ ...form, start_date: event.target.value })} required /></label>
-        <label>First payment due<input type="date" value={form.first_payment_due_date ?? ""} onChange={(event) => setForm({ ...form, first_payment_due_date: event.target.value })} /></label>
-        <button type="submit" disabled={isSaving}>{isSaving ? "Saving..." : "Create enrollment"}</button>
+        <label>Inicio<input type="date" value={form.start_date} onChange={(event) => setForm({ ...form, start_date: event.target.value })} required /></label>
+        <label>Primeiro vencimento<input type="date" value={form.first_payment_due_date ?? ""} onChange={(event) => setForm({ ...form, first_payment_due_date: event.target.value })} /></label>
+        <button type="submit" disabled={isSaving}>{isSaving ? "Salvando..." : "Criar matricula"}</button>
       </form>
-      {page === null ? <LoadingState /> : <DataTable columns={columns} rows={sorted.rows} getRowKey={(enrollment) => enrollment.id} emptyMessage="No enrollments found." isLoading={isLoading} total={page.total} limit={page.limit} offset={page.offset} onPageChange={(nextOffset) => void loadEnrollments(nextOffset)} sortKey={sorted.sortKey} sortDirection={sorted.sortDirection} onSortChange={sorted.setSortKey} />}
+      {page === null ? <LoadingState /> : <DataTable columns={columns} rows={sorted.rows} getRowKey={(enrollment) => enrollment.id} emptyMessage="Nenhuma matricula encontrada." isLoading={isLoading} total={page.total} limit={page.limit} offset={page.offset} onPageChange={(nextOffset) => void loadEnrollments(nextOffset)} sortKey={sorted.sortKey} sortDirection={sorted.sortDirection} onSortChange={sorted.setSortKey} />}
     </section>
   );
 }

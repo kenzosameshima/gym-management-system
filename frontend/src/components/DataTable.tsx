@@ -57,11 +57,19 @@ export function DataTable<T>({
           <thead>
             <tr>
               {columns.map((column) => (
-                <th key={column.key}>
+                <th
+                  key={column.key}
+                  aria-sort={sortKey === column.key ? (sortDirection === "asc" ? "ascending" : "descending") : undefined}
+                >
                   {column.sortValue !== undefined && onSortChange !== undefined ? (
-                    <button type="button" className="table-sort" onClick={() => onSortChange(column.key)}>
-                      {column.header}
-                      {sortKey === column.key ? ` ${sortDirection === "asc" ? "ASC" : "DESC"}` : ""}
+                    <button
+                      type="button"
+                      className="table-sort"
+                      onClick={() => onSortChange(column.key)}
+                      title={`Ordenar por ${column.header}`}
+                    >
+                      <span>{column.header}</span>
+                      {sortKey === column.key && <span className="sort-indicator">{sortDirection === "asc" ? "Cresc." : "Decresc."}</span>}
                     </button>
                   ) : (
                     column.header
@@ -74,7 +82,7 @@ export function DataTable<T>({
             {rows.map((row) => (
               <tr key={getRowKey(row)}>
                 {columns.map((column) => (
-                  <td key={column.key}>{column.render(row)}</td>
+                  <td key={column.key} data-label={column.header}>{column.render(row)}</td>
                 ))}
               </tr>
             ))}
@@ -84,14 +92,14 @@ export function DataTable<T>({
       {canPage && (
         <div className="pagination">
           <span>
-            Showing {offset + 1}-{Math.min(offset + limit, total)} of {total}
+            Mostrando {offset + 1}-{Math.min(offset + limit, total)} de {total}
           </span>
           <div className="row-actions">
             <button type="button" className="secondary" disabled={!hasPrevious} onClick={() => onPageChange(Math.max(0, offset - limit))}>
-              Previous
+              Anterior
             </button>
             <button type="button" className="secondary" disabled={!hasNext} onClick={() => onPageChange(offset + limit)}>
-              Next
+              Proximo
             </button>
           </div>
         </div>

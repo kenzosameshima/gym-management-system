@@ -164,7 +164,9 @@ POST /api/auth/login
 GET /api/auth/me
 ```
 
-Register example:
+### First administrator
+
+The application does not create a default user automatically. After the services are running, create the first administrator explicitly through the registration endpoint:
 
 ```bash
 curl -X POST http://localhost:8000/api/auth/register \
@@ -172,7 +174,14 @@ curl -X POST http://localhost:8000/api/auth/register \
   -d '{"email":"admin@example.com","full_name":"Admin User","password":"strong-password","role":"ADMIN"}'
 ```
 
-Login example:
+Then sign in through the frontend at `http://localhost:3000` with:
+
+- Email: `admin@example.com`
+- Password: `strong-password`
+
+Use these values only for local development or demos. For shared environments, replace them with a real administrator email and a strong unique password.
+
+Login API example:
 
 ```bash
 curl -X POST http://localhost:8000/api/auth/login \

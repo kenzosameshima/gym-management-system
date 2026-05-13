@@ -3,6 +3,5 @@ interface ErrorStateProps {
 }
 
 export function ErrorState({ message }: ErrorStateProps): JSX.Element {
-  return <div className="state state-error">{message}</div>;
+  return <div className="state state-error" role="alert">{message}</div>;
 }
-

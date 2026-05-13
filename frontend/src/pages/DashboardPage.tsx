@@ -90,31 +90,31 @@ export function DashboardPage(): JSX.Element {
   return (
     <section className="page-stack">
       <header className="page-header">
-        <h1>Dashboard</h1>
+        <h1>Visao geral da operacao</h1>
       </header>
       {error !== null && <ErrorState message={error} />}
       <div className="stats-grid">
-        {data.activeStudents !== undefined && <StatCard label="Active students" value={data.activeStudents.total} />}
-        {data.defaulters !== undefined && <StatCard label="Defaulters" value={data.defaulters.total} />}
+        {data.activeStudents !== undefined && <StatCard label="Alunos ativos" value={data.activeStudents.total} />}
+        {data.defaulters !== undefined && <StatCard label="Alunos inadimplentes" value={data.defaulters.total} />}
         {data.revenue !== undefined && (
           <>
-            <StatCard label="Expected revenue" value={formatCurrency(data.revenue.expected_revenue)} />
-            <StatCard label="Received revenue" value={formatCurrency(data.revenue.received_revenue)} />
-            <StatCard label="Overdue revenue" value={formatCurrency(data.revenue.overdue_revenue)} />
-            <StatCard label="Pending revenue" value={formatCurrency(data.revenue.pending_revenue)} />
+            <StatCard label="Receita prevista" value={formatCurrency(data.revenue.expected_revenue)} />
+            <StatCard label="Recebido" value={formatCurrency(data.revenue.received_revenue)} />
+            <StatCard label="Vencido" value={formatCurrency(data.revenue.overdue_revenue)} />
+            <StatCard label="A receber" value={formatCurrency(data.revenue.pending_revenue)} />
           </>
         )}
         {data.dailyAccess !== undefined && (
           <>
-            <StatCard label="Access attempts" value={data.dailyAccess.days.reduce((total, day) => total + day.total_attempts, 0)} />
-            <StatCard label="Allowed accesses" value={data.dailyAccess.days.reduce((total, day) => total + day.allowed_count, 0)} />
-            <StatCard label="Blocked accesses" value={data.dailyAccess.days.reduce((total, day) => total + day.blocked_count, 0)} />
+            <StatCard label="Check-ins" value={data.dailyAccess.days.reduce((total, day) => total + day.total_attempts, 0)} />
+            <StatCard label="Acessos liberados" value={data.dailyAccess.days.reduce((total, day) => total + day.allowed_count, 0)} />
+            <StatCard label="Acessos bloqueados" value={data.dailyAccess.days.reduce((total, day) => total + day.blocked_count, 0)} />
           </>
         )}
         {data.workout !== undefined && (
           <>
-            <StatCard label="Active workout plans" value={data.workout.active_workout_plans} detail={`${data.workout.total_exercises} exercises`} />
-            <StatCard label="Progress records" value={data.workout.exercise_progress_records} />
+            <StatCard label="Fichas ativas" value={data.workout.active_workout_plans} detail={`${data.workout.total_exercises} exercicios`} />
+            <StatCard label="Evolucoes registradas" value={data.workout.exercise_progress_records} />
           </>
         )}
       </div>

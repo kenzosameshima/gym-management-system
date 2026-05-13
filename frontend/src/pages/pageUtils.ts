@@ -3,16 +3,16 @@ import axios from "axios";
 export function getErrorMessage(error: unknown): string {
   if (axios.isAxiosError(error)) {
     if (error.code === "ECONNABORTED") {
-      return "Request timed out. Check the connection and try again.";
+      return "A operacao demorou demais. Verifique a conexao e tente novamente.";
     }
     if (error.response === undefined) {
-      return "Network error. Check the API connection and try again.";
+      return "Nao foi possivel conectar ao servidor. Verifique a API e tente novamente.";
     }
     if (error.response.status === 401) {
-      return "Your session has expired. Sign in again.";
+      return "Sua sessao expirou. Entre novamente.";
     }
     if (error.response.status === 403) {
-      return "You do not have permission to perform this action.";
+      return "Voce nao tem permissao para executar esta acao.";
     }
     const detail = error.response?.data;
     if (typeof detail === "object" && detail !== null && "message" in detail) {
@@ -26,22 +26,22 @@ export function getErrorMessage(error: unknown): string {
   if (error instanceof Error) {
     return error.message;
   }
-  return "Unexpected error.";
+  return "Erro inesperado.";
 }
 
 export function formatCurrency(value: string | number): string {
-  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(Number(value));
+  return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(Number(value));
 }
 
 export function formatDate(value: string | null): string {
   if (value === null || value === "") {
     return "-";
   }
-  return new Intl.DateTimeFormat("en-US").format(new Date(`${value}T00:00:00`));
+  return new Intl.DateTimeFormat("pt-BR").format(new Date(`${value}T00:00:00`));
 }
 
 export function formatDateTime(value: string): string {
-  return new Intl.DateTimeFormat("en-US", {
+  return new Intl.DateTimeFormat("pt-BR", {
     dateStyle: "short",
     timeStyle: "short"
   }).format(new Date(value));
@@ -49,10 +49,16 @@ export function formatDateTime(value: string): string {
 
 export function formatFinancialStatus(value: string): string {
   const labels: Record<string, string> = {
-    IN_GOOD_STANDING: "In good standing",
-    DEFAULTER: "Defaulter",
-    NO_ACTIVE_ENROLLMENT: "No active enrollment",
-    INACTIVE: "Inactive"
+    IN_GOOD_STANDING: "Em dia",
+    DEFAULTER: "Inadimplente",
+    NO_ACTIVE_ENROLLMENT: "Sem matricula ativa",
+    INACTIVE: "Inativo",
+    ACTIVE: "Ativo",
+    PENDING: "Pendente",
+    PAID: "Pago",
+    OVERDUE: "Vencido",
+    EXPIRED: "Expirado",
+    CANCELLED: "Cancelado"
   };
   return labels[value] ?? value;
 }
