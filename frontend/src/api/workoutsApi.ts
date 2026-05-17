@@ -13,6 +13,17 @@ import type {
   WorkoutPlanUpdatePayload
 } from "../types/workout";
 
+type RawExercise = Partial<Exercise> & {
+  exercise?: string;
+  exercise_name?: string;
+  muscle_groups?: string;
+  muscles?: string;
+  load_kg?: string | number | null;
+  weight?: string | number | null;
+  observation?: string | null;
+  observations?: string | null;
+};
+
 const WORKOUT_ENDPOINTS = {
   plans: "/api/workout-plans",
   transferPlans: "/api/workout-plans/transfer",
@@ -24,6 +35,28 @@ const WORKOUT_ENDPOINTS = {
   progressByStudentAndExercise: (studentId: number, exerciseId: number) =>
     `/api/exercise-progress/student/${studentId}/exercise/${exerciseId}`
 } as const;
+
+function normalizeExercise(rawExercise: RawExercise): Exercise {
+  return {
+    id: Number(rawExercise.id ?? 0),
+    workout_plan_id: Number(rawExercise.workout_plan_id ?? 0),
+    name: String(rawExercise.name ?? rawExercise.exercise_name ?? rawExercise.exercise ?? "Exercicio sem nome"),
+    muscle_group: String(rawExercise.muscle_group ?? rawExercise.muscle_groups ?? rawExercise.muscles ?? "Nao informado"),
+    sets: Number(rawExercise.sets ?? 1),
+    repetitions: Number(rawExercise.repetitions ?? 1),
+    load: rawExercise.load === undefined || rawExercise.load === null
+      ? rawExercise.load_kg === undefined || rawExercise.load_kg === null
+        ? rawExercise.weight === undefined || rawExercise.weight === null
+          ? null
+          : String(rawExercise.weight)
+        : String(rawExercise.load_kg)
+      : String(rawExercise.load),
+    notes: rawExercise.notes ?? rawExercise.observations ?? rawExercise.observation ?? null,
+    status: rawExercise.status === "INACTIVE" ? "INACTIVE" : "ACTIVE",
+    created_at: rawExercise.created_at ?? "",
+    updated_at: rawExercise.updated_at ?? ""
+  };
+}
 
 export async function getWorkoutPlans(params: WorkoutPlanQueryParams = {}): Promise<Page<WorkoutPlan>> {
   const response = await httpClient.get<Page<WorkoutPlan>>(WORKOUT_ENDPOINTS.plans, { params });
@@ -56,8 +89,8 @@ export async function transferWorkoutPlans(
 }
 
 export async function getExercises(workoutPlanId: number): Promise<Exercise[]> {
-  const response = await httpClient.get<Exercise[]>(WORKOUT_ENDPOINTS.exercises(workoutPlanId));
-  return response.data;
+  const response = await httpClient.get<RawExercise[]>(WORKOUT_ENDPOINTS.exercises(workoutPlanId));
+  return response.data.map(normalizeExercise);
 }
 
 export async function createExercise(workoutPlanId: number, payload: ExercisePayload): Promise<Exercise> {

@@ -283,10 +283,12 @@ class ExerciseProgressService:
         repository: ExerciseProgressRepository,
         student_repository: StudentRepository,
         exercise_repository: ExerciseRepository,
+        workout_plan_repository: WorkoutPlanRepository,
     ) -> None:
         self._repository = repository
         self._student_repository = student_repository
         self._exercise_repository = exercise_repository
+        self._workout_plan_repository = workout_plan_repository
 
     async def create_exercise_progress(
         self,
@@ -294,7 +296,11 @@ class ExerciseProgressService:
         payload: ExerciseProgressCreate,
     ) -> ExerciseProgress:
         await self._ensure_active_student(session, payload.student_id)
-        await self._ensure_exercise_exists(session, payload.exercise_id)
+        await self._ensure_exercise_can_receive_progress(
+            session,
+            student_id=payload.student_id,
+            exercise_id=payload.exercise_id,
+        )
         try:
             exercise_progress = await self._repository.create(session, payload)
             await session.commit()
@@ -331,7 +337,13 @@ class ExerciseProgressService:
         if student.status != StudentStatus.ACTIVE:
             raise ApplicationError("STUDENT_INACTIVE", "Student is inactive.", 409)
 
-    async def _ensure_exercise_exists(self, session: AsyncSession, exercise_id: int) -> None:
+    async def _ensure_exercise_can_receive_progress(
+        self,
+        session: AsyncSession,
+        *,
+        student_id: int,
+        exercise_id: int,
+    ) -> None:
         exercise = await self._exercise_repository.get_by_id(session, exercise_id)
         if exercise is None:
             raise ApplicationError("EXERCISE_NOT_FOUND", "Exercise was not found.", 404)
@@ -339,6 +351,24 @@ class ExerciseProgressService:
             raise ApplicationError(
                 "EXERCISE_INACTIVE",
                 "Exercise is inactive.",
+                status.HTTP_409_CONFLICT,
+            )
+        workout_plan = await self._workout_plan_repository.get_by_id(
+            session,
+            exercise.workout_plan_id,
+        )
+        if workout_plan is None:
+            raise ApplicationError("WORKOUT_PLAN_NOT_FOUND", "Workout plan was not found.", 404)
+        if workout_plan.status != WorkoutPlanStatus.ACTIVE:
+            raise ApplicationError(
+                "WORKOUT_PLAN_INACTIVE",
+                "Workout plan is inactive.",
+                status.HTTP_409_CONFLICT,
+            )
+        if workout_plan.student_id != student_id:
+            raise ApplicationError(
+                "EXERCISE_STUDENT_MISMATCH",
+                "Exercise does not belong to the selected student.",
                 status.HTTP_409_CONFLICT,
             )
 
@@ -369,9 +399,11 @@ def get_exercise_progress_service(
     repository: ExerciseProgressRepository = Depends(get_exercise_progress_repository),
     student_repository: StudentRepository = Depends(get_student_repository),
     exercise_repository: ExerciseRepository = Depends(get_exercise_repository),
+    workout_plan_repository: WorkoutPlanRepository = Depends(get_workout_plan_repository),
 ) -> ExerciseProgressService:
     return ExerciseProgressService(
         repository=repository,
         student_repository=student_repository,
         exercise_repository=exercise_repository,
+        workout_plan_repository=workout_plan_repository,
     )

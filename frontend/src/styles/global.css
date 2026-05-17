@@ -601,6 +601,12 @@ th {
   margin: 0;
 }
 
+.workout-sheet-header p:not(.eyebrow) {
+  color: var(--muted);
+  line-height: 1.45;
+  margin: 0.35rem 0 0;
+}
+
 .workout-sheet-meta {
   color: var(--muted);
   display: flex;
@@ -619,6 +625,56 @@ th {
 
 .workout-sheet-table .table-wrap {
   border-color: var(--border-strong);
+}
+
+.workout-sheet-table {
+  padding: 0;
+}
+
+.workout-sheet-table .table-wrap {
+  border: 0;
+  border-radius: 8px;
+}
+
+.workout-sheet-table table {
+  min-width: 780px;
+}
+
+.workout-sheet-table th {
+  background: var(--surface-muted);
+  color: var(--text);
+  font-size: 0.76rem;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.workout-sheet-table td {
+  vertical-align: top;
+}
+
+.workout-sheet-table th:nth-child(1),
+.workout-sheet-table td:nth-child(1) {
+  width: 18%;
+}
+
+.workout-sheet-table th:nth-child(2),
+.workout-sheet-table td:nth-child(2) {
+  width: 22%;
+}
+
+.workout-sheet-table th:nth-child(3),
+.workout-sheet-table td:nth-child(3),
+.workout-sheet-table th:nth-child(4),
+.workout-sheet-table td:nth-child(4),
+.workout-sheet-table th:nth-child(5),
+.workout-sheet-table td:nth-child(5) {
+  text-align: center;
+  width: 8rem;
+}
+
+.workout-sheet-table th:nth-child(6),
+.workout-sheet-table td:nth-child(6) {
+  min-width: 180px;
 }
 
 details summary {

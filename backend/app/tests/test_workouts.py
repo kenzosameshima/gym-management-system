@@ -1,6 +1,10 @@
+from itertools import count
+
 from httpx import AsyncClient
 
 from app.tests.test_students_plans import auth_headers, student_payload
+
+_student_sequence = count(1)
 
 
 def workout_plan_payload(student_id: int, instructor_id: int) -> dict[str, int | str]:
@@ -36,9 +40,14 @@ async def create_student(
     *,
     active: bool = True,
 ) -> int:
+    sequence = next(_student_sequence)
     response = await client.post(
         "/api/students",
-        json=student_payload(status="ACTIVE" if active else "INACTIVE"),
+        json=student_payload(
+            cpf=f"{sequence:011d}",
+            email=f"student-{sequence}@example.com",
+            status="ACTIVE" if active else "INACTIVE",
+        ),
         headers=headers,
     )
     assert response.status_code == 201
@@ -185,6 +194,70 @@ async def test_register_exercise_progress(client: AsyncClient) -> None:
     assert response.json()["exercise_id"] == exercise_id
     assert response.json()["load"] == "42.50"
     assert response.json()["repetitions"] == 11
+
+
+async def test_block_progress_when_exercise_belongs_to_another_student(
+    client: AsyncClient,
+) -> None:
+    admin_headers = await auth_headers(client)
+    instructor_headers, instructor_id = await auth_headers_and_user_id(client, "INSTRUCTOR")
+    first_student_id = await create_student(client, admin_headers)
+    second_student_id = await create_student(client, admin_headers)
+    workout_plan_id = await create_workout_plan(
+        client,
+        instructor_headers,
+        student_id=first_student_id,
+        instructor_id=instructor_id,
+    )
+    exercise_id = await create_exercise(client, instructor_headers, workout_plan_id)
+
+    response = await client.post(
+        "/api/exercise-progress",
+        json={
+            "student_id": second_student_id,
+            "exercise_id": exercise_id,
+            "load": "42.50",
+            "repetitions": 11,
+        },
+        headers=instructor_headers,
+    )
+
+    assert response.status_code == 409
+    assert response.json()["error"]["code"] == "EXERCISE_STUDENT_MISMATCH"
+
+
+async def test_block_progress_for_exercise_in_inactive_workout_plan(
+    client: AsyncClient,
+) -> None:
+    admin_headers = await auth_headers(client)
+    instructor_headers, instructor_id = await auth_headers_and_user_id(client, "INSTRUCTOR")
+    student_id = await create_student(client, admin_headers)
+    workout_plan_id = await create_workout_plan(
+        client,
+        instructor_headers,
+        student_id=student_id,
+        instructor_id=instructor_id,
+    )
+    exercise_id = await create_exercise(client, instructor_headers, workout_plan_id)
+    delete_response = await client.delete(
+        f"/api/workout-plans/{workout_plan_id}",
+        headers=instructor_headers,
+    )
+
+    response = await client.post(
+        "/api/exercise-progress",
+        json={
+            "student_id": student_id,
+            "exercise_id": exercise_id,
+            "load": "42.50",
+            "repetitions": 11,
+        },
+        headers=instructor_headers,
+    )
+
+    assert delete_response.status_code == 200
+    assert response.status_code == 409
+    assert response.json()["error"]["code"] == "WORKOUT_PLAN_INACTIVE"
 
 
 async def test_block_progress_for_inactive_exercise(client: AsyncClient) -> None:
